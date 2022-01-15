@@ -1,9 +1,9 @@
-package testcron
+package bootcron
 
 import (
-	"testtx/appcore"
-	"testtx/config"
 	"time"
+	"walletboot/appcore"
+	"walletboot/config"
 
 	"github.com/sirupsen/logrus"
 )

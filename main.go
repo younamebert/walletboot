@@ -1,13 +1,13 @@
 package main
 
 import (
-	"testtx/testcron"
+	"walletboot/bootcron"
 
 	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	serve, err := testcron.New()
+	serve, err := bootcron.New()
 	if err != nil {
 		logrus.Error(err)
 		return

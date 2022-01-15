@@ -2,18 +2,18 @@ package appcore
 
 import (
 	"math/big"
-	"testtx/common"
-	"testtx/config"
-	"testtx/httpxfs"
-	"testtx/serve"
-	"testtx/storage/badger"
+	"walletboot/common"
+	"walletboot/config"
+	"walletboot/httpxfs"
+	"walletboot/serve"
+	"walletboot/storage/badger"
 
 	"github.com/sirupsen/logrus"
 )
 
 type AppCore struct {
-	Wallet *serve.RandWallet
-	SendTx *serve.Txlog
+	Wallet   *serve.Wallet
+	Transfer *serve.Transfer
 }
 
 func New() (*AppCore, error) {
@@ -29,39 +29,68 @@ func New() (*AppCore, error) {
 
 	cli := httpxfs.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
 
-	wallet := serve.NewRqWallet(LoadAccountsDb, cli)
+	wallet := serve.NewWallet(LoadAccountsDb)
 
-	txSend := serve.NewTxSend(txDb, cli)
+	transfer := serve.NewTxSend(txDb, cli)
 
 	return &AppCore{
-		Wallet: wallet,
-		SendTx: txSend,
+		Wallet:   wallet,
+		Transfer: transfer,
 	}, nil
 }
 
-//new Wallet
+// 生成钱包
 func (c *AppCore) RunRand() {
-	if err := c.Wallet.RandCreateWallet(); err != nil {
+	if _, err := c.Wallet.NewAccount(); err != nil {
 		logrus.Error(err)
 		return
 	}
 }
 
-// send transfer
+func (c *AppCore) CoreWalletFrom() string {
+	addr, err := c.Wallet.NewAccount()
+	if err != nil {
+		logrus.Error(err)
+		return ""
+	}
+	return addr.B58String()
+}
+
+// 发送交易
 func (c *AppCore) RunSendTx() {
+	c.UpdateAccount()
+	txTo, txFromObj := c.Wallet.RandAddr()
 	request := &serve.SendTransactionArgs{
-		To: c.Wallet.GetTxTo(),
+		To: txTo,
 	}
-	for k, v := range c.Wallet.GetTxFrom() {
-		request.From = k
-		request.Value = c.randAmount(v)
+	for addr, val := range txFromObj {
+		request.From = addr
+		request.Value = c.randAmount(val)
 	}
-	hash, err := c.SendTx.SendTransactionFunc(request)
+
+	hash, err := c.Transfer.SendTransactionFunc(request)
 	if err != nil {
 		logrus.Error(err)
 		return
 	}
 	logrus.Infof("send Tx From:%v To:%v value:%v txHash:%v", request.From, request.To, request.Value, hash)
+}
+
+func (c *AppCore) UpdateAccount() {
+	list, err := c.Transfer.GetCurrentTxs()
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	for _, v := range list {
+		for ks, vs := range v {
+			addr := common.B58ToAddress([]byte(ks))
+			if err := c.Wallet.UpdateAccout(addr, vs); err != nil {
+				logrus.Error(err)
+				continue
+			}
+		}
+	}
 }
 
 func (c *AppCore) randAmount(val string) string {
@@ -74,5 +103,4 @@ func (c *AppCore) randAmount(val string) string {
 	result = result.Mul(bal, config.AccountFactor)
 
 	return result.String()
-
 }
