@@ -39,7 +39,7 @@ func New() (*AppCore, error) {
 	}, nil
 }
 
-// 生成钱包
+//new Wallet
 func (c *AppCore) RunRand() {
 	if err := c.Wallet.RandCreateWallet(); err != nil {
 		logrus.Error(err)
@@ -47,7 +47,7 @@ func (c *AppCore) RunRand() {
 	}
 }
 
-// 发送交易
+// send transfer
 func (c *AppCore) RunSendTx() {
 	request := &serve.SendTransactionArgs{
 		To: c.Wallet.GetTxTo(),

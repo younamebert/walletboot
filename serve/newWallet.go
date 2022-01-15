@@ -33,7 +33,6 @@ func NewRqWallet(Db badger.IStorage, ClientHttp *httpxfs.Client) *RandWallet {
 var AddrPrefix = []byte("addr:")
 var AddrPrefixBal = []byte("addrbal:")
 
-// 随机生成钱包地址
 func (r *RandWallet) RandCreateWallet() error {
 	var addr string
 	if err := r.ClientHttp.CallMethod(1, "Wallet.Create", nil, &addr); err != nil {
@@ -51,7 +50,6 @@ func (r *RandWallet) RandCreateWallet() error {
 	return r.LoadAccountsDb.Set(key, bs)
 }
 
-// 随机获取钱包地址作为交易目标地址
 func (r *RandWallet) GetTxTo() string {
 
 	info := &Accounts{}
@@ -73,7 +71,6 @@ func (r *RandWallet) GetTxTo() string {
 	return info.Address
 }
 
-// 随机获取有额度的钱包作为交易的from
 func (r *RandWallet) GetTxFrom() map[string]string {
 	// update
 	if err := r.TxFroms(); err != nil {
@@ -104,7 +101,6 @@ func (r *RandWallet) GetTxFrom() map[string]string {
 	return result
 }
 
-// 获取所有成为from资格的用户
 func (r *RandWallet) TxFroms() error {
 
 	addrList := make([]string, 0)
