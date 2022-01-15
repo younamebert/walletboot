@@ -1,18 +1,16 @@
 package testcron
 
 import (
+	"testtx/appcore"
+	"testtx/config"
 	"time"
-	"walletboot/appcore"
-	"walletboot/config"
-	"walletboot/httpxfs"
 
 	"github.com/sirupsen/logrus"
 )
 
 type Cron struct {
-	httpClient *httpxfs.Client
-	appcore    *appcore.AppCore
-	spec       string
+	appcore *appcore.AppCore
+	spec    string
 }
 
 func (job *Cron) CronBatchRunRand() {
@@ -48,7 +46,7 @@ func (c *Cron) Start() {
 	for {
 		select {
 		case <-time.After(timeDur):
-			// c.CronBatchRunRand()
+			c.CronBatchRunRand()
 			c.CronBatchRunSendTx()
 		}
 	}

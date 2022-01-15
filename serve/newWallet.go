@@ -5,9 +5,9 @@ import (
 	"errors"
 	"math/big"
 	"math/rand"
-	"walletboot/common"
-	"walletboot/httpxfs"
-	"walletboot/storage/badger"
+	"testtx/common"
+	"testtx/httpxfs"
+	"testtx/storage/badger"
 
 	"github.com/sirupsen/logrus"
 )

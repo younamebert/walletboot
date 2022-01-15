@@ -1,7 +1,7 @@
 package main
 
 import (
-	"walletboot/testcron"
+	"testtx/testcron"
 
 	"github.com/sirupsen/logrus"
 )

@@ -2,8 +2,8 @@ package serve
 
 import (
 	"encoding/json"
-	"walletboot/httpxfs"
-	"walletboot/storage/badger"
+	"testtx/httpxfs"
+	"testtx/storage/badger"
 )
 
 type SendTransactionArgs struct {

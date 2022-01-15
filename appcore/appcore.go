@@ -2,11 +2,11 @@ package appcore
 
 import (
 	"math/big"
-	"walletboot/common"
-	"walletboot/config"
-	"walletboot/httpxfs"
-	"walletboot/serve"
-	"walletboot/storage/badger"
+	"testtx/common"
+	"testtx/config"
+	"testtx/httpxfs"
+	"testtx/serve"
+	"testtx/storage/badger"
 
 	"github.com/sirupsen/logrus"
 )

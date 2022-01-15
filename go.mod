@@ -1,4 +1,4 @@
-module walletboot
+module testtx
 
 go 1.17
 
