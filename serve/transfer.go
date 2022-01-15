@@ -3,6 +3,7 @@ package serve
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 	"strconv"
 	"walletboot/httpxfs"
 	"walletboot/storage/badger"
@@ -54,7 +55,8 @@ func (t *Transfer) GetCurrentTxs() ([]map[string]string, error) {
 		return nil, errors.New("height does not exist")
 	}
 	// 更新交易日志信息
-	blockHeight := block["height"].(string)
+	height := new(big.Float).SetFloat64(block["height"].(float64))
+	blockHeight := height.String()
 	blockNumber, err := strconv.ParseInt(blockHeight, 10, 64)
 	if err != nil {
 		return nil, err

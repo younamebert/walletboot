@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -67,12 +68,20 @@ func (cli *Client) CallMethod(id int, methodname string, params interface{}, out
 	defer result.Body.Close()
 	// The result must be a pointer so that response json can unmarshal into it.
 
+	resp := make(map[string]interface{})
+
 	content, err := ioutil.ReadAll(result.Body)
 	if err != nil {
 		return err
 	}
 
-	bs, err := json.Marshal(content)
+	if err := json.Unmarshal(content, &resp); err != nil {
+		return err
+	}
+
+	// fmt.Printf("resp:%v\n", resp["result"])
+
+	bs, err := json.Marshal(resp["result"])
 	if err != nil {
 		return err
 	}
@@ -93,6 +102,7 @@ func (cli *Client) CallMethod(id int, methodname string, params interface{}, out
 			}
 			return nil
 		}
+		fmt.Println(string(bs))
 		return err
 	}
 
