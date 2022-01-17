@@ -85,6 +85,14 @@ func (db *KeyStoreDB) Iterator() badger.Iterator {
 	return db.storage.NewIteratorPrefix(addrAccountPre)
 }
 
+func (db *KeyStoreDB) Set(key, val []byte) error {
+	return db.storage.SetData(key, val)
+}
+
+func (db *KeyStoreDB) Get(key []byte) ([]byte, error) {
+	return db.storage.GetData(key)
+}
+
 func (db *KeyStoreDB) PutPrivateKey(addr common.Address, key *ecdsa.PrivateKey) error {
 	sKey := append(addrKeyPre, addr.Bytes()...)
 	keybytes := crypto.DefaultEncodePrivateKey(key)

@@ -12,6 +12,7 @@ func main() {
 		logrus.Error(err)
 		return
 	}
+
 	go serve.Start()
 	select {}
 }

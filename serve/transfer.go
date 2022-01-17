@@ -3,6 +3,7 @@ package serve
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"walletboot/httpxfs"
@@ -44,9 +45,9 @@ func NewTxSend(txDb badger.IStorage, cli *httpxfs.Client) *Transfer {
 	}
 }
 
-//上一个区块交易成功的区块
+// Blocks that were successfully traded in the previous block
 func (t *Transfer) GetCurrentTxs() ([]map[string]string, error) {
-	// 获取当前主链最高块
+	// Get the highest block of the current main chain
 	block := make(map[string]interface{})
 	if err := t.Conn.CallMethod(1, "Chain.Head", nil, &block); err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func (t *Transfer) GetCurrentTxs() ([]map[string]string, error) {
 	if block == nil {
 		return nil, errors.New("height does not exist")
 	}
-	// 更新交易日志信息
+	//Update transaction log information
 	height := new(big.Float).SetFloat64(block["height"].(float64))
 	blockHeight := height.String()
 	blockNumber, err := strconv.ParseInt(blockHeight, 10, 64)
@@ -67,7 +68,7 @@ func (t *Transfer) GetCurrentTxs() ([]map[string]string, error) {
 	t.CurrentHash = block["hash"].(string)
 	t.TargetHeight = strconv.FormatInt(TargetNumber, 10)
 
-	// 获取最高块交易成功的数据
+	// Obtain the latest successful block transaction data
 	type getTxsByBlockNumArgs struct {
 		Number string `json:"number"`
 	}
@@ -83,7 +84,7 @@ func (t *Transfer) GetCurrentTxs() ([]map[string]string, error) {
 
 	resp := make([]map[string]string, 0)
 	for _, v := range result {
-		deposit := make(map[string]string, 0)
+		deposit := make(map[string]string)
 		to := v["to"].(string)
 		deposit[to] = v["value"].(string)
 		resp = append(resp, deposit)
@@ -93,24 +94,25 @@ func (t *Transfer) GetCurrentTxs() ([]map[string]string, error) {
 
 func (t *Transfer) SendTransactionFunc(args *SendTransactionArgs) (string, error) {
 
-	var txhash *string
+	var txhash string
+
 	if err := t.Conn.CallMethod(1, "Wallet.SendTransaction", args, &txhash); err != nil {
+		fmt.Printf("sendTX err:%v\n", err)
 		return "", err
 	}
-
 	if err := t.writeTxLog(txhash, args); err != nil {
 		return "", err
 	}
-	return *txhash, nil
+	return txhash, nil
 }
 
-func (t *Transfer) writeTxLog(txhash *string, args *SendTransactionArgs) error {
+func (t *Transfer) writeTxLog(txhash string, args *SendTransactionArgs) error {
 
 	txlog := &Txlog{
 		From:          args.From,
 		To:            args.To,
 		Value:         args.Value,
-		TxHash:        *txhash,
+		TxHash:        txhash,
 		TargetHeight:  t.TargetHeight,
 		CurrentHeight: t.CurrentHeight,
 		CurrentHash:   t.CurrentHash,

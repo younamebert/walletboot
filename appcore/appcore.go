@@ -29,7 +29,10 @@ func New() (*AppCore, error) {
 
 	cli := httpxfs.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
 
-	wallet := serve.NewWallet(LoadAccountsDb)
+	wallet, err := serve.NewWallet(LoadAccountsDb)
+	if err != nil {
+		return nil, err
+	}
 
 	transfer := serve.NewTxSend(txDb, cli)
 
@@ -39,25 +42,16 @@ func New() (*AppCore, error) {
 	}, nil
 }
 
-// 生成钱包
-func (c *AppCore) RunRand() {
+//
+func (c *AppCore) RunRand() error {
 	if _, err := c.Wallet.NewAccount(); err != nil {
-		logrus.Error(err)
-		return
+		return err
 	}
+	return nil
 }
 
-func (c *AppCore) CoreWalletFrom() string {
-	addr, err := c.Wallet.NewAccount()
-	if err != nil {
-		logrus.Error(err)
-		return ""
-	}
-	return addr.B58String()
-}
-
-// 发送交易
-func (c *AppCore) RunSendTx() {
+//Send transaction
+func (c *AppCore) RunSendTx() error {
 	c.UpdateAccount()
 	txTo, txFromObj := c.Wallet.RandAddr()
 	request := &serve.SendTransactionArgs{
@@ -70,10 +64,10 @@ func (c *AppCore) RunSendTx() {
 
 	hash, err := c.Transfer.SendTransactionFunc(request)
 	if err != nil {
-		logrus.Error(err)
-		return
+		return err
 	}
 	logrus.Infof("send Tx From:%v To:%v value:%v txHash:%v", request.From, request.To, request.Value, hash)
+	return nil
 }
 
 func (c *AppCore) UpdateAccount() {

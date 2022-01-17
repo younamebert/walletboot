@@ -86,6 +86,12 @@ func Nano2BaseRatCoin(coin string) (*big.Float, error) {
 	return sum, nil
 }
 
+// Cmp compares x and y and returns:
+//
+//   -1 if x <  y
+//    0 if x == y
+//   +1 if x >  y
+//
 func BigEqual(x string, y string) int {
 	xbig, _ := new(big.Int).SetString(x, 0)
 	ybig, _ := new(big.Int).SetString(y, 0)
