@@ -2,10 +2,7 @@ package serve
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"math/big"
-	"strconv"
 	"walletboot/httpxfs"
 	"walletboot/storage/badger"
 )
@@ -22,8 +19,7 @@ type GetAccountArgs struct {
 
 type Transfer struct {
 	TxDb          badger.IStorage
-	Conn          *httpxfs.Client
-	TargetHeight  string
+	conn          *httpxfs.Client
 	CurrentHeight string
 	CurrentHash   string
 }
@@ -33,7 +29,6 @@ type Txlog struct {
 	To            string
 	Value         string
 	TxHash        string
-	TargetHeight  string
 	CurrentHeight string
 	CurrentHash   string
 }
@@ -41,69 +36,38 @@ type Txlog struct {
 func NewTxSend(txDb badger.IStorage, cli *httpxfs.Client) *Transfer {
 	return &Transfer{
 		TxDb: txDb,
-		Conn: cli,
+		conn: cli,
 	}
-}
-
-// Blocks that were successfully traded in the previous block
-func (t *Transfer) GetCurrentTxs() ([]map[string]string, error) {
-	// Get the highest block of the current main chain
-	block := make(map[string]interface{})
-	if err := t.Conn.CallMethod(1, "Chain.Head", nil, &block); err != nil {
-		return nil, err
-	}
-	if block == nil {
-		return nil, errors.New("height does not exist")
-	}
-	//Update transaction log information
-	height := new(big.Float).SetFloat64(block["height"].(float64))
-	blockHeight := height.String()
-	blockNumber, err := strconv.ParseInt(blockHeight, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	TargetNumber := blockNumber + 1
-	t.CurrentHeight = blockHeight
-	t.CurrentHash = block["hash"].(string)
-	t.TargetHeight = strconv.FormatInt(TargetNumber, 10)
-
-	// Obtain the latest successful block transaction data
-	type getTxsByBlockNumArgs struct {
-		Number string `json:"number"`
-	}
-
-	req := &getTxsByBlockNumArgs{
-		Number: blockHeight,
-	}
-
-	result := make([]map[string]interface{}, 0)
-	if err := t.Conn.CallMethod(1, "Chain.GetTxsByBlockNum", &req, &result); err != nil {
-		return nil, err
-	}
-
-	resp := make([]map[string]string, 0)
-	for _, v := range result {
-		deposit := make(map[string]string)
-		to := v["to"].(string)
-		deposit[to] = v["value"].(string)
-		resp = append(resp, deposit)
-	}
-	return resp, nil
 }
 
 func (t *Transfer) SendTransactionFunc(args *SendTransactionArgs) (string, error) {
 
-	var txhash string
-
-	if err := t.Conn.CallMethod(1, "Wallet.SendTransaction", args, &txhash); err != nil {
-		fmt.Printf("sendTX err:%v\n", err)
+	if err := t.updateWriteMsg(); err != nil {
 		return "", err
 	}
+
+	var txhash string
+
+	if err := t.conn.CallMethod(1, "Wallet.SendTransaction", args, &txhash); err != nil {
+		return "", err
+	}
+
 	if err := t.writeTxLog(txhash, args); err != nil {
 		return "", err
 	}
 	return txhash, nil
+}
+
+func (t *Transfer) updateWriteMsg() error {
+	head := make(map[string]interface{})
+	err := t.conn.CallMethod(1, "Chain.Head", nil, &head)
+	if err != nil {
+		return err
+	}
+
+	t.CurrentHash = head["hash"].(string)
+	t.CurrentHeight = fmt.Sprint(head["height"])
+	return nil
 }
 
 func (t *Transfer) writeTxLog(txhash string, args *SendTransactionArgs) error {
@@ -113,7 +77,6 @@ func (t *Transfer) writeTxLog(txhash string, args *SendTransactionArgs) error {
 		To:            args.To,
 		Value:         args.Value,
 		TxHash:        txhash,
-		TargetHeight:  t.TargetHeight,
 		CurrentHeight: t.CurrentHeight,
 		CurrentHash:   t.CurrentHash,
 	}

@@ -20,4 +20,5 @@ var (
 	BigMaxUint256 = new(big.Int).Sub(Big256Bits, Big1)
 	BigFloat0     = new(big.Float).SetInt(Big0)
 	BigFloat1     = new(big.Float).SetInt(Big1)
+	Big1XFS, _    = Atto2BaseRatCoin("1")
 )

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -79,12 +78,11 @@ func (cli *Client) CallMethod(id int, methodname string, params interface{}, out
 		return err
 	}
 
-	// fmt.Printf("resp:%v\n", resp["result"])
-
 	bs, err := json.Marshal(resp["result"])
 	if err != nil {
 		return err
 	}
+
 	err = json.Unmarshal(bs, out)
 	if err != nil {
 		if err.Error() == ErrtoSliceStr.Error() {
@@ -102,7 +100,6 @@ func (cli *Client) CallMethod(id int, methodname string, params interface{}, out
 			}
 			return nil
 		}
-		fmt.Println(string(bs))
 		return err
 	}
 

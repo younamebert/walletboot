@@ -1,6 +1,7 @@
 package appcore
 
 import (
+	"fmt"
 	"math/big"
 	"walletboot/common"
 	"walletboot/config"
@@ -28,14 +29,13 @@ func New() (*AppCore, error) {
 	}
 
 	cli := httpxfs.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
-
-	wallet, err := serve.NewWallet(LoadAccountsDb)
+	fmt.Println(0)
+	wallet, err := serve.NewWallet(LoadAccountsDb, cli)
 	if err != nil {
 		return nil, err
 	}
 
 	transfer := serve.NewTxSend(txDb, cli)
-
 	return &AppCore{
 		Wallet:   wallet,
 		Transfer: transfer,
@@ -52,7 +52,11 @@ func (c *AppCore) RunRand() error {
 
 //Send transaction
 func (c *AppCore) RunSendTx() error {
-	c.UpdateAccount()
+
+	if err := c.Wallet.UpdateAccount(); err != nil {
+		return err
+	}
+
 	txTo, txFromObj := c.Wallet.RandAddr()
 	request := &serve.SendTransactionArgs{
 		To: txTo,
@@ -71,7 +75,7 @@ func (c *AppCore) RunSendTx() error {
 }
 
 func (c *AppCore) UpdateAccount() {
-	list, err := c.Transfer.GetCurrentTxs()
+	list, err := c.Wallet.GetCurrentTxs()
 	if err != nil {
 		logrus.Error(err)
 		return

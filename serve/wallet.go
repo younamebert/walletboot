@@ -11,6 +11,7 @@ import (
 	"walletboot/common"
 	"walletboot/crypto"
 	"walletboot/dao"
+	"walletboot/httpxfs"
 	"walletboot/storage/badger"
 
 	"github.com/sirupsen/logrus"
@@ -22,6 +23,7 @@ type Wallet struct {
 	mu          sync.RWMutex
 	cacheMu     sync.RWMutex
 	defaultAddr common.Address
+	conn        *httpxfs.Client
 	cache       map[common.Address]*ecdsa.PrivateKey
 }
 
@@ -31,11 +33,12 @@ type Accounts struct {
 }
 
 // NewWallet constructs and returns a new Wallet instance with badger db.
-func NewWallet(storage *badger.Storage) (*Wallet, error) {
+func NewWallet(storage *badger.Storage, cli *httpxfs.Client) (*Wallet, error) {
 
 	w := &Wallet{
 		db:    dao.NewKeyStoreDB(storage),
 		cache: make(map[common.Address]*ecdsa.PrivateKey),
+		conn:  cli,
 	}
 	w.defaultAddr, _ = w.db.GetDefaultAddress()
 	if err := w.setupTxFrom(); err != nil {
@@ -52,46 +55,114 @@ func (w *Wallet) setupTxFrom() error {
 	if len(froms) < 1 {
 
 		val, err := w.db.Get(addrPrefix)
-		if err == nil {
-			if err := json.Unmarshal(val, txFrom); err != nil {
+
+		if err != nil {
+			addr, err := w.NewAccount()
+			if err != nil {
+				return err
+			}
+			txFrom.Address = addr.B58String()
+			txFrom.Balance = "0"
+			bs, err := json.Marshal(txFrom)
+			if err != nil {
+				return err
+			}
+			if err := w.db.Set(addrPrefix, bs); err != nil {
+				return err
+			}
+			if err := w.db.UpdateAccount(addr, bs); err != nil {
+				return err
+			}
+			return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", addr.B58String())
+
+		} else {
+
+			txFromRaw, err := w.checkTxFrom(val)
+
+			if err != nil {
+				return err
+			}
+
+			if err := json.Unmarshal(txFromRaw, txFrom); err != nil {
 				return err
 			}
 
 			if common.BigEqual(txFrom.Balance, common.Big0.String()) <= 0 {
 				return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", txFrom.Address)
 			}
-
-			addr := common.B58ToAddress([]byte(txFrom.Address))
-			bs, err := json.Marshal(txFrom)
-			if err != nil {
-				return err
-			}
-
-			if err := w.db.UpdateAccount(addr, bs); err != nil {
-				return err
-			}
-			return nil
 		}
-
-		addr, err := w.NewAccount()
-		if err != nil {
-			return err
-		}
-		txFrom.Address = addr.B58String()
-		txFrom.Balance = "0"
-		bs, err := json.Marshal(txFrom)
-		if err != nil {
-			return err
-		}
-		if err := w.db.Set(addrPrefix, bs); err != nil {
-			return err
-		}
-		if err := w.db.UpdateAccount(addr, bs); err != nil {
-			return err
-		}
-		logrus.Infof("No user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", addr.B58String())
 	}
 	return nil
+}
+
+// Blocks that were successfully traded in the previous block
+func (w *Wallet) UpdateAccount() error {
+
+	iter := w.db.Iterator()
+
+	txFrom := &Accounts{}
+	var balance string
+
+	for iter.Next() {
+
+		if err := json.Unmarshal(iter.Val(), txFrom); err != nil {
+			return err
+		}
+
+		req := &getAccountArgs{
+			Address: txFrom.Address,
+		}
+
+		if err := w.conn.CallMethod(1, "State.GetBalance", &req, &balance); err != nil {
+			return err
+		}
+		bal, err := common.Atto2BaseRatCoin(balance)
+		if err != nil {
+			return err
+		}
+		txFrom.Balance = bal.String()
+		addr := common.B58ToAddress([]byte(txFrom.Address))
+
+		if err := w.UpdateAccout(addr, bal.String()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) checkTxFrom(txobj []byte) ([]byte, error) {
+	addrPrefix := []byte("setupfrom:")
+
+	txFrom := &Accounts{}
+	if err := json.Unmarshal(txobj, txFrom); err != nil {
+		return nil, err
+	}
+
+	var balance string
+	req := &getAccountArgs{
+		Address: txFrom.Address,
+	}
+	if err := w.conn.CallMethod(1, "State.GetBalance", &req, &balance); err != nil {
+		return nil, err
+	}
+	bal, err := common.Atto2BaseRatCoin(balance)
+	if err != nil {
+		return nil, err
+	}
+
+	txFrom.Balance = bal.String()
+	bs, err := json.Marshal(txFrom)
+	if err != nil {
+		return nil, err
+	}
+	if err := w.db.Set(addrPrefix, bs); err != nil {
+		return nil, err
+	}
+	address := common.B58ToAddress([]byte(txFrom.Address))
+	if err := w.db.UpdateAccount(address, bs); err != nil {
+		return nil, err
+	}
+	return bs, nil
 }
 
 // AddByRandom constructs a new Wallet with a random number and retuens the its address.
@@ -185,6 +256,7 @@ func (w *Wallet) RandAddr() (string, map[string]string) {
 		obj := Froms[indexRandFrom]
 		addrFrom[obj.Address] = obj.Balance
 	}
+	fmt.Println(addrFrom)
 	return addrTo, addrFrom
 }
 
