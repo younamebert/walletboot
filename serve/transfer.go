@@ -1,16 +1,32 @@
 package serve
 
 import (
+	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"walletboot/common"
+	"walletboot/common/ahash"
+	"walletboot/config"
+	"walletboot/crypto"
 	"walletboot/httpxfs"
 	"walletboot/storage/badger"
 )
 
-type SendTransactionArgs struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Value string `json:"value"`
+type SendTransaction struct {
+	Version   string `json:"version"`
+	To        string `json:"to"`
+	Value     string `json:"value"`
+	GasPrice  string `json:"gas_price"`
+	GasLimit  string `json:"gas_limit"`
+	Data      string `json:"data"`
+	Nonce     string `json:"nonce"`
+	Signature string `json:"signature"`
+}
+
+type SendRawTxArgs struct {
+	Data string `json:"data"`
 }
 
 type GetAccountArgs struct {
@@ -25,9 +41,7 @@ type Transfer struct {
 }
 
 type Txlog struct {
-	From          string
-	To            string
-	Value         string
+	Info          *SendTransaction
 	TxHash        string
 	CurrentHeight string
 	CurrentHash   string
@@ -40,22 +54,78 @@ func NewTxSend(txDb badger.IStorage, cli *httpxfs.Client) *Transfer {
 	}
 }
 
-func (t *Transfer) SendTransactionFunc(args *SendTransactionArgs) (string, error) {
+func sortAndEncodeMap(data map[string]string) string {
+	mapkeys := make([]string, 0)
+	for k := range data {
+		mapkeys = append(mapkeys, k)
+	}
+	sort.Strings(mapkeys)
+	strbuf := ""
+	for i, key := range mapkeys {
+		val := data[key]
+		if val == "" {
+			continue
+		}
+		strbuf += fmt.Sprintf("%s=%s", key, val)
+		if i < len(mapkeys)-1 {
+			strbuf += "&"
+		}
+	}
+	return strbuf
+}
+
+func (t *Transfer) SignHash(tx *SendTransaction, key *ecdsa.PrivateKey) (string, error) {
+
+	data := ""
+	if tx.Data != "" && len(tx.Data) > 0 {
+		data = "0x" + hex.EncodeToString([]byte(tx.Data))
+	}
+
+	tmp := map[string]string{
+		"version":   config.Version,
+		"to":        tx.To,
+		"gas_price": tx.GasPrice,
+		"gas_limit": tx.GasLimit,
+		"data":      data,
+		"nonce":     tx.Nonce,
+		"value":     tx.Value,
+	}
+	enc := sortAndEncodeMap(tmp)
+
+	if enc == "" {
+		return "", fmt.Errorf("SignHash sort error")
+	}
+	hash := common.Bytes2Hash(ahash.SHA256([]byte(enc)))
+
+	sig, err := crypto.ECDSASign(hash.Bytes(), key)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(sig), nil
+}
+
+func (t *Transfer) SendTransactionFunc(args *SendRawTxArgs) (string, error) {
+	var txhash string
 
 	if err := t.updateWriteMsg(); err != nil {
 		return "", err
 	}
 
-	var txhash string
-
-	if err := t.conn.CallMethod(1, "Wallet.SendTransaction", args, &txhash); err != nil {
-		return "", err
-	}
-
-	if err := t.writeTxLog(txhash, args); err != nil {
+	if err := t.conn.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
 		return "", err
 	}
 	return txhash, nil
+}
+
+func (t *Transfer) GetNonce(addr string) (string, error) {
+	req := &GetAddrNonceByHashArgs{
+		Address: addr,
+	}
+	var result string
+	if err := t.conn.CallMethod(1, "TxPool.GetAddrTxNonce", &req, &result); err != nil {
+		return "", err
+	}
+	return result, nil
 }
 
 func (t *Transfer) updateWriteMsg() error {
@@ -70,19 +140,17 @@ func (t *Transfer) updateWriteMsg() error {
 	return nil
 }
 
-func (t *Transfer) writeTxLog(txhash string, args *SendTransactionArgs) error {
+func (t *Transfer) WriteTxLog(from, txhash string, args *SendTransaction) error {
 
 	txlog := &Txlog{
-		From:          args.From,
-		To:            args.To,
-		Value:         args.Value,
 		TxHash:        txhash,
 		CurrentHeight: t.CurrentHeight,
 		CurrentHash:   t.CurrentHash,
+		Info:          args,
 	}
 	bs, err := json.Marshal(txlog)
 	if err != nil {
 		return err
 	}
-	return t.TxDb.Set(args.From, bs)
+	return t.TxDb.Set(from, bs)
 }

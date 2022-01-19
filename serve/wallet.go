@@ -41,6 +41,10 @@ func NewWallet(storage *badger.Storage, cli *httpxfs.Client) (*Wallet, error) {
 		conn:  cli,
 	}
 	w.defaultAddr, _ = w.db.GetDefaultAddress()
+
+	if err := w.UpdateAccount(); err != nil {
+		return nil, err
+	}
 	if err := w.setupTxFrom(); err != nil {
 		return nil, err
 	}
@@ -116,21 +120,38 @@ func (w *Wallet) UpdateAccount() error {
 		if err := w.conn.CallMethod(1, "State.GetBalance", &req, &balance); err != nil {
 			return err
 		}
-		bal, err := common.Atto2BaseRatCoin(balance)
-		if err != nil {
-			return err
+
+		txFrom.Balance = balance
+		if balance == "" {
+			txFrom.Balance = common.Big0.String()
 		}
-		txFrom.Balance = bal.String()
+
 		addr := common.B58ToAddress([]byte(txFrom.Address))
 
-		if err := w.UpdateAccout(addr, bal.String()); err != nil {
+		if err := w.UpdateAccout(addr, balance); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+func (w *Wallet) Accounts() {
+	iter := w.db.Iterator()
+
+	accounts := make([]*Accounts, 0)
+	ait := &Accounts{}
+	for iter.Next() {
+		if err := json.Unmarshal(iter.Val(), ait); err != nil {
+			continue
+		}
+		accounts = append(accounts, ait)
+	}
+	bs, _ := common.MarshalIndent(accounts)
+	fmt.Println(string(bs))
+}
+
 func (w *Wallet) checkTxFrom(txobj []byte) ([]byte, error) {
+
 	addrPrefix := []byte("setupfrom:")
 
 	txFrom := &Accounts{}
@@ -138,19 +159,17 @@ func (w *Wallet) checkTxFrom(txobj []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	var balance string
+	var balance string = common.Big0.String()
 	req := &getAccountArgs{
 		Address: txFrom.Address,
 	}
-	if err := w.conn.CallMethod(1, "State.GetBalance", &req, &balance); err != nil {
-		return nil, err
-	}
-	bal, err := common.Atto2BaseRatCoin(balance)
-	if err != nil {
+	err := w.conn.CallMethod(1, "State.GetBalance", &req, &balance)
+	if err != nil && err.Error() != "null" {
+		// fmt.Printf("err:%v %T\n", err, err)
 		return nil, err
 	}
 
-	txFrom.Balance = bal.String()
+	txFrom.Balance = balance
 	bs, err := json.Marshal(txFrom)
 	if err != nil {
 		return nil, err
@@ -180,7 +199,7 @@ func (w *Wallet) GetWalletNewTime(addr common.Address) ([]byte, error) {
 
 func (w *Wallet) NewAccount() (common.Address, error) {
 	accounts := &Accounts{
-		Balance: "0",
+		Balance: common.Big0.String(),
 	}
 	addr, err := w.AddByRandom()
 	if err != nil {
@@ -229,7 +248,7 @@ func (w *Wallet) RandAddr() (string, map[string]string) {
 	indexRandTo := rand.Intn(int(maxLenTo))
 	addrTo := ""
 
-	Froms := make([]*Accounts, 0)
+	Froms := make([]map[string]string, 0)
 
 	info := &Accounts{}
 	i := 0
@@ -243,21 +262,19 @@ func (w *Wallet) RandAddr() (string, map[string]string) {
 		if i == indexRandTo {
 			addrTo = info.Address
 		}
-
-		if common.BigEqual(info.Balance, common.Big0.String()) > 0 {
-			Froms = append(Froms, info)
+		if common.BigEqual(info.Balance, common.Big0.String()) == 1 {
+			addrFrom[info.Address] = info.Balance
 		}
 		i++
 	}
 
 	maxLenFrom := len(Froms)
-	if maxLenFrom > 0 {
-		indexRandFrom := rand.Intn(maxLenFrom)
-		obj := Froms[indexRandFrom]
-		addrFrom[obj.Address] = obj.Balance
+	if maxLenFrom < 1 {
+		return addrTo, addrFrom
 	}
-	fmt.Println(addrFrom)
-	return addrTo, addrFrom
+
+	indexRandFrom := rand.Intn(maxLenFrom)
+	return addrTo, Froms[indexRandFrom]
 }
 
 func (w *Wallet) GetAccount(addr common.Address) (*big.Int, error) {

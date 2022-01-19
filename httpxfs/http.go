@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -76,6 +77,17 @@ func (cli *Client) CallMethod(id int, methodname string, params interface{}, out
 
 	if err := json.Unmarshal(content, &resp); err != nil {
 		return err
+	}
+
+	// logrus.Infof("methodname:%v params:%v resp:%v\n", methodname, params, string(content))
+
+	bsErr, err := json.Marshal(resp["error"])
+	if err != nil {
+		return err
+	}
+
+	if string(bsErr) != "null" {
+		return fmt.Errorf(string(bsErr))
 	}
 
 	bs, err := json.Marshal(resp["result"])

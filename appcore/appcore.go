@@ -1,6 +1,8 @@
 package appcore
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"walletboot/common"
@@ -29,7 +31,7 @@ func New() (*AppCore, error) {
 	}
 
 	cli := httpxfs.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
-	fmt.Println(0)
+
 	wallet, err := serve.NewWallet(LoadAccountsDb, cli)
 	if err != nil {
 		return nil, err
@@ -58,47 +60,61 @@ func (c *AppCore) RunSendTx() error {
 	}
 
 	txTo, txFromObj := c.Wallet.RandAddr()
-	request := &serve.SendTransactionArgs{
-		To: txTo,
-	}
-	for addr, val := range txFromObj {
-		request.From = addr
-		request.Value = c.randAmount(val)
+
+	if len(txFromObj) == 0 {
+		return fmt.Errorf("no user with from qualification was found in the wallet launcher")
 	}
 
-	hash, err := c.Transfer.SendTransactionFunc(request)
-	if err != nil {
-		return err
+	tx := &serve.SendTransaction{}
+	req := &serve.SendRawTxArgs{}
+	for addr, val := range txFromObj {
+
+		priKey, err := c.Wallet.GetKeyByAddress(common.B58ToAddress([]byte(addr)))
+		if err != nil {
+			return err
+		}
+
+		nonce, err := c.Transfer.GetNonce(addr)
+		if err != nil {
+			return err
+		}
+		tx.Version = config.Version
+		tx.To = txTo
+		tx.Nonce = nonce
+		tx.GasLimit = config.TxGas.String()
+		tx.GasPrice = config.DefaultGasPrice().String()
+		tx.Value = c.randAmount(val)
+		sign, err := c.Transfer.SignHash(tx, priKey)
+		if err != nil {
+			return err
+		}
+		tx.Signature = sign
+		bs, err := json.Marshal(tx)
+		if err != nil {
+			return err
+		}
+		req.Data = base64.StdEncoding.EncodeToString(bs)
+
+		hash, err := c.Transfer.SendTransactionFunc(req)
+		if err != nil {
+			return err
+		}
+
+		if err := c.Transfer.WriteTxLog(addr, hash, tx); err != nil {
+			return err
+		}
+		logrus.Infof("send Tx From:%v To:%v value:%v txHash:%v", addr, tx.To, tx.Value, hash)
 	}
-	logrus.Infof("send Tx From:%v To:%v value:%v txHash:%v", request.From, request.To, request.Value, hash)
 	return nil
 }
 
-func (c *AppCore) UpdateAccount() {
-	list, err := c.Wallet.GetCurrentTxs()
-	if err != nil {
-		logrus.Error(err)
-		return
-	}
-	for _, v := range list {
-		for ks, vs := range v {
-			addr := common.B58ToAddress([]byte(ks))
-			if err := c.Wallet.UpdateAccout(addr, vs); err != nil {
-				logrus.Error(err)
-				continue
-			}
-		}
-	}
-}
-
 func (c *AppCore) randAmount(val string) string {
-	result := big.NewFloat(0)
+	remain := big.NewInt(0)
 
-	bal, err := common.Atto2BaseRatCoin(val)
-	if err != nil {
+	bal, ok := new(big.Int).SetString(val, 0)
+	if !ok {
 		return "0"
 	}
-	result = result.Mul(bal, config.AccountFactor)
-
-	return result.String()
+	remain = remain.Div(bal, config.AccountFactor)
+	return remain.String()
 }
