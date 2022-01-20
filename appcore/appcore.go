@@ -109,12 +109,19 @@ func (c *AppCore) RunSendTx() error {
 }
 
 func (c *AppCore) randAmount(val string) string {
-	remain := big.NewInt(0)
+	remain := big.NewFloat(0)
 
-	bal, ok := new(big.Int).SetString(val, 0)
-	if !ok {
+	// bal, ok := new(big.Int).SetString(val, 0)
+	bal, err := common.Atto2BaseRatCoin(val)
+	if err != nil {
 		return "0"
 	}
-	remain = remain.Div(bal, config.AccountFactor)
-	return remain.String()
+	remain = remain.Mul(bal, config.AccountFactor)
+
+	result, err := common.BaseCoin2Atto(remain.String())
+	if err != nil {
+		return "0"
+	}
+	// remain = remain.(bal, config.AccountFactor)
+	return result.String()
 }
