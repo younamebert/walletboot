@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"sync"
 	"walletboot/common"
+	"walletboot/config"
 	"walletboot/crypto"
 	"walletboot/dao"
 	"walletboot/httpxfs"
@@ -198,6 +199,9 @@ func (w *Wallet) GetWalletNewTime(addr common.Address) ([]byte, error) {
 }
 
 func (w *Wallet) NewAccount() (common.Address, error) {
+	if w.GetNumber() >= config.AccountMaxNumber {
+		return common.Address{}, fmt.Errorf("create Account Max Number:%v\n", config.AccountMaxNumber)
+	}
 	accounts := &Accounts{
 		Balance: common.Big0.String(),
 	}
@@ -241,14 +245,14 @@ func (w *Wallet) UpdateAccout(addr common.Address, bal string) error {
 func (w *Wallet) RandAddr() (string, map[string]string) {
 
 	maxLenTo := w.db.AccountsNumber()
+
 	addrFrom := make(map[string]string)
+	Froms := make([]map[string]string, 0)
 	if maxLenTo == 0 {
 		return "", addrFrom
 	}
 	indexRandTo := rand.Intn(int(maxLenTo))
 	addrTo := ""
-
-	Froms := make([]map[string]string, 0)
 
 	info := &Accounts{}
 	i := 0
@@ -264,6 +268,7 @@ func (w *Wallet) RandAddr() (string, map[string]string) {
 		}
 		if common.BigEqual(info.Balance, common.Big0.String()) == 1 {
 			addrFrom[info.Address] = info.Balance
+			Froms = append(Froms, addrFrom)
 		}
 		i++
 	}
@@ -275,6 +280,37 @@ func (w *Wallet) RandAddr() (string, map[string]string) {
 
 	indexRandFrom := rand.Intn(maxLenFrom)
 	return addrTo, Froms[indexRandFrom]
+}
+
+func (w *Wallet) GetNumber() int {
+	i := 0
+	iter := w.db.Iterator()
+	for iter.Next() {
+		i++
+	}
+	return i
+}
+
+func (w *Wallet) GetForms() ([]map[string]string, error) {
+	addrFrom := make(map[string]string)
+	Froms := make([]map[string]string, 0)
+
+	info := &Accounts{}
+	i := 0
+	iter := w.db.Iterator()
+	for iter.Next() {
+
+		if err := json.Unmarshal(iter.Val(), &info); err != nil {
+			return nil, err
+		}
+
+		if common.BigEqual(info.Balance, common.Big0.String()) == 1 {
+			addrFrom[info.Address] = info.Balance
+			Froms = append(Froms, addrFrom)
+		}
+		i++
+	}
+	return Froms, nil
 }
 
 func (w *Wallet) GetAccount(addr common.Address) (*big.Int, error) {

@@ -100,7 +100,7 @@ func (c *AppCore) RunSendTx() error {
 			return err
 		}
 
-		if err := c.Transfer.WriteTxLog(addr, hash, tx); err != nil {
+		if err := c.Transfer.WriteTxLog(hash, tx); err != nil {
 			return err
 		}
 		logrus.Infof("send Tx From:%v To:%v value:%v txHash:%v", addr, tx.To, tx.Value, hash)

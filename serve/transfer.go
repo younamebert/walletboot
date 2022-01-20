@@ -140,7 +140,7 @@ func (t *Transfer) updateWriteMsg() error {
 	return nil
 }
 
-func (t *Transfer) WriteTxLog(from, txhash string, args *SendTransaction) error {
+func (t *Transfer) WriteTxLog(txhash string, args *SendTransaction) error {
 
 	txlog := &Txlog{
 		TxHash:        txhash,
@@ -148,9 +148,20 @@ func (t *Transfer) WriteTxLog(from, txhash string, args *SendTransaction) error 
 		CurrentHash:   t.CurrentHash,
 		Info:          args,
 	}
+
 	bs, err := json.Marshal(txlog)
 	if err != nil {
 		return err
 	}
-	return t.TxDb.Set(from, bs)
+	key := append(config.TxLogPrefix, []byte(txhash)...)
+	return t.TxDb.SetData(key, bs)
+}
+
+func (t *Transfer) ListTxLog() []string {
+	result := []string{}
+	t.TxDb.PrefixForeachData(config.TxLogPrefix, func(k, v []byte) error {
+		result = append(result, string(k))
+		return nil
+	})
+	return result
 }

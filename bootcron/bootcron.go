@@ -51,6 +51,10 @@ func (c *Cron) Stop() {
 	// c.quit = make(chan struct{})
 }
 
+func (c *Cron) AppCore() *appcore.AppCore {
+	return c.appcore
+}
+
 func (c *Cron) Start() {
 
 	timeDur, err := time.ParseDuration(config.CronSpec)
