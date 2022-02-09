@@ -51,7 +51,6 @@ func start() error {
 	if err != nil {
 		return err
 	}
-
 	go task.Start()
 	select {}
 }
