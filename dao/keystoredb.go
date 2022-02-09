@@ -45,6 +45,10 @@ func (db *KeyStoreDB) Foreach(fn func(address common.Address, key *ecdsa.Private
 	})
 }
 
+func (db *KeyStoreDB) AddrForeach(fn func(k string, v []byte) error) error {
+	return db.storage.PrefixForeach(string(addrAccountPre), fn)
+}
+
 func (db *KeyStoreDB) GetAddressNewTime(addr common.Address) ([]byte, error) {
 	key := append(addNewTime, addr.Bytes()...)
 	data, err := db.storage.GetData(key)

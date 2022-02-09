@@ -14,8 +14,6 @@ import (
 	"walletboot/dao"
 	"walletboot/httpxfs"
 	"walletboot/storage/badger"
-
-	"github.com/sirupsen/logrus"
 )
 
 // Wallet represents a software wallet that has a default address derived from private key.
@@ -102,18 +100,12 @@ func (w *Wallet) setupTxFrom() error {
 
 // Blocks that were successfully traded in the previous block
 func (w *Wallet) UpdateAccount() error {
-
-	iter := w.db.Iterator()
-
-	txFrom := &Accounts{}
-	var balance string
-
-	for iter.Next() {
-
-		if err := json.Unmarshal(iter.Val(), txFrom); err != nil {
+	return w.db.AddrForeach(func(k string, v []byte) error {
+		txFrom := &Accounts{}
+		var balance string
+		if err := json.Unmarshal(v, txFrom); err != nil {
 			return err
 		}
-
 		req := &getAccountArgs{
 			Address: txFrom.Address,
 		}
@@ -132,8 +124,8 @@ func (w *Wallet) UpdateAccount() error {
 		if err := w.UpdateAccout(addr, balance); err != nil {
 			return err
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (w *Wallet) Accounts() {
@@ -221,19 +213,22 @@ func (w *Wallet) NewAccount() (common.Address, error) {
 }
 
 func (w *Wallet) UpdateAccout(addr common.Address, bal string) error {
-	val, err := w.db.GetAccount(addr)
+	_, err := w.db.GetAccount(addr)
 	if err != nil {
 		return err
 	}
-	if len(val) < 1 {
-		return errors.New("val len eq nil")
-	}
+	// if len(val) < 1 {
+	// 	return errors.New("val len eq nil")
+	// }
 
-	accounts := &Accounts{}
-	if err := json.Unmarshal(val, accounts); err != nil {
-		return err
+	accounts := &Accounts{
+		Address: addr.B58String(),
+		Balance: bal,
 	}
-	accounts.Balance = bal
+	// if err := json.Unmarshal(val, accounts); err != nil {
+	// 	return err
+	// }
+	// accounts.Balance = bal
 
 	bs, err := json.Marshal(accounts)
 	if err != nil {
@@ -256,12 +251,10 @@ func (w *Wallet) RandAddr() (string, map[string]string) {
 
 	info := &Accounts{}
 	i := 0
-	iter := w.db.Iterator()
-	for iter.Next() {
 
-		if err := json.Unmarshal(iter.Val(), &info); err != nil {
-			logrus.Error(err)
-			return "", nil
+	err := w.db.AddrForeach(func(k string, v []byte) error {
+		if err := json.Unmarshal(v, &info); err != nil {
+			return err
 		}
 		if i == indexRandTo {
 			addrTo = info.Address
@@ -271,6 +264,10 @@ func (w *Wallet) RandAddr() (string, map[string]string) {
 			Froms = append(Froms, addrFrom)
 		}
 		i++
+		return nil
+	})
+	if err != nil {
+		return "", addrFrom
 	}
 
 	maxLenFrom := len(Froms)

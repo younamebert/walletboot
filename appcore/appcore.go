@@ -19,6 +19,8 @@ type AppCore struct {
 	Transfer *serve.Transfer
 }
 
+var Cil *httpxfs.Client
+
 func New() (*AppCore, error) {
 	LoadAccountsDb, err := badger.New(config.LoadAccountsDbPath)
 	if err != nil {

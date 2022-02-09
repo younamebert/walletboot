@@ -14,7 +14,7 @@ var (
 	RpcClientApiTimeOut = "180s"
 	AccountMaxNumber    = 100
 	TxLogPrefix         = []byte("txlog:")
-	CronSpec            = "3s"                            // 5s
+	CronSpec            = "13s"                           // 5s
 	AccountFactor       = new(big.Float).SetFloat64(0.02) // 2%
 	NewAccountNumber    = 1                               //
 	SendTxNumber        = 1                               //
