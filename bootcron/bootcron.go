@@ -1,6 +1,7 @@
 package bootcron
 
 import (
+	"fmt"
 	"time"
 	"walletboot/appcore"
 	"walletboot/config"
@@ -17,9 +18,10 @@ type Cron struct {
 func (job *Cron) CronBatchRunRand() {
 	for i := 0; i < config.NewAccountNumber; i++ {
 		if err := job.appcore.RunRand(); err != nil {
-			logrus.Error(err)
-			job.Stop()
-			return
+			fmt.Println(err)
+			// job.Stop()
+			// return
+			continue
 		}
 	}
 }
@@ -27,9 +29,11 @@ func (job *Cron) CronBatchRunRand() {
 func (job *Cron) CronBatchRunSendTx() {
 	for i := 0; i < config.SendTxNumber; i++ {
 		if err := job.appcore.RunSendTx(); err != nil {
-			logrus.Error(err)
-			job.Stop()
-			return
+			// logrus.Error(err)
+			// job.Stop()
+			// return
+			fmt.Println(err)
+			continue
 		}
 	}
 }
