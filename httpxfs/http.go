@@ -1,10 +1,10 @@
 package httpxfs
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -72,28 +72,27 @@ func (cli *Client) CallMethod(id int, methodname string, params interface{}, out
 		return err
 	}
 
-	bs, err := json.Marshal(content)
-	if err != nil {
+	info := make(map[string]interface{})
+	if err := json.Unmarshal(content, &info); err != nil {
 		return err
 	}
-	err = json.Unmarshal(bs, out)
-	if err != nil {
-		if err.Error() == ErrtoSliceStr.Error() {
-			sentences := []string{}
-			scanner := bufio.NewScanner(bytes.NewBuffer(bs))
-			for scanner.Scan() {
-				sentences = append(sentences, scanner.Text())
-			}
-			bs, err := json.Marshal(sentences)
-			if err != nil {
-				return err
-			}
-			if err := json.Unmarshal(bs, out); err != nil {
-				return err
-			}
-			return nil
+
+	if _, ok := info["result"]; ok {
+
+		js, err := json.Marshal(info["result"])
+		if err != nil {
+			return err
 		}
-		return err
+		err = json.Unmarshal(js, out)
+		if err != nil {
+			return err
+		}
+	} else {
+		js, err := json.Marshal(info["result"])
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("err:%v\n", string(js))
 	}
 
 	return nil

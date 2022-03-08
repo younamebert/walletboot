@@ -13,7 +13,8 @@ type SendTransactionArgs struct {
 }
 
 type GetAccountArgs struct {
-	Address string `json:"address"`
+	RootHash string `json:"root_hash"`
+	Address  string `json:"address"`
 }
 
 type Txlog struct {
