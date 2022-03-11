@@ -45,6 +45,10 @@ func (db *KeyStoreDB) Foreach(fn func(address common.Address, key *ecdsa.Private
 	})
 }
 
+func (db *KeyStoreDB) ForIndex(fn func(n int, k []byte, v []byte)) {
+	db.ForIndex(fn)
+}
+
 func (db *KeyStoreDB) AddrForeach(fn func(k string, v []byte) error) error {
 	return db.storage.PrefixForeach(string(addrAccountPre), fn)
 }

@@ -1,25 +1,25 @@
 package bootcron
 
 import (
-	"fmt"
 	"time"
-	"walletboot/appcore"
+	"walletboot/app"
 	"walletboot/config"
 
 	"github.com/sirupsen/logrus"
 )
 
 type Cron struct {
-	appcore *appcore.AppCore
-	spec    string
-	quit    chan struct{}
+	app  *app.App
+	spec string
+	quit chan struct{}
 }
 
 func (job *Cron) CronBatchRunRand() {
 	for i := 0; i < config.NewAccountNumber; i++ {
-		if err := job.appcore.RunRand(); err != nil {
-			fmt.Println(err)
-			// job.Stop()
+		if err := job.app.CreateAccount(); err != nil {
+			// fmt.Println(err)
+			logrus.Warn(err)
+			job.Stop()
 			// return
 			continue
 		}
@@ -28,25 +28,27 @@ func (job *Cron) CronBatchRunRand() {
 
 func (job *Cron) CronBatchRunSendTx() {
 	for i := 0; i < config.SendTxNumber; i++ {
-		if err := job.appcore.RunSendTx(); err != nil {
+		if err := job.app.SendTransaction(); err != nil {
 			// logrus.Error(err)
 			// job.Stop()
 			// return
-			fmt.Println(err)
+			logrus.Warn(err)
+			job.Stop()
+			// fmt.Println(err)
 			continue
 		}
 	}
 }
 
 func New() (*Cron, error) {
-	appcore, err := appcore.New()
-	if err != nil {
-		return nil, err
-	}
+	appcore := app.New()
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return &Cron{
-		appcore: appcore,
-		spec:    config.CronSpec,
-		quit:    make(chan struct{}),
+		app:  appcore,
+		spec: config.CronSpec,
+		quit: make(chan struct{}),
 	}, nil
 }
 
@@ -55,9 +57,9 @@ func (c *Cron) Stop() {
 	// c.quit = make(chan struct{})
 }
 
-func (c *Cron) AppCore() *appcore.AppCore {
-	return c.appcore
-}
+// func (c *Cron) AppCore() *app.App {
+// 	return c.app
+// }
 
 func (c *Cron) Start() {
 
