@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"strconv"
 	"walletboot/backend"
-	"walletboot/chainmgr"
 	"walletboot/common"
 	"walletboot/config"
 	"walletboot/serve"
@@ -16,16 +15,15 @@ import (
 )
 
 type App struct {
-	back      *backend.Backend
-	xfsClient chainmgr.ChainMgr
+	back *backend.Backend
+	// XFSClient chainmgr.ChainMgr
 }
 
 // var Cil *httpxfs.Client
 
 func New() *App {
 	return &App{
-		back:      backend.NewBackend(),
-		xfsClient: chainmgr.NewChainMgr(),
+		back: backend.NewBackend(),
 	}
 }
 
@@ -37,20 +35,25 @@ func (app *App) CreateAccount() error {
 	return nil
 }
 
+func (app *App) UpdateAccountState() error {
+	return app.back.XFSClient.UpdateAccountState()
+}
+
 //Send transaction
 func (app *App) SendTransaction() error {
 
 	accounts := app.back.Wallet.RandomAccessAccount()
 
 	if len(accounts) == 0 {
-		return fmt.Errorf("no user with from qualification was found in the wallet launcher")
+		defaultAddr := app.back.Wallet.GetDefault()
+		return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", defaultAddr.B58String())
 	}
 
 	tx, req, err := app.NewTransaction(accounts[0], accounts[1])
 	if err != nil {
 		return err
 	}
-	hash := app.xfsClient.SendRawTransaction(req.Data)
+	hash := app.back.XFSClient.SendRawTransaction(req.Data)
 	if hash != nil {
 		if err := app.back.Transfer.WriteTxLog(*hash, tx); err != nil {
 			return err
@@ -69,7 +72,7 @@ func (app *App) NewTransaction(toObj, fromObj *serve.Accounts) (*serve.SendTrans
 		return nil, nil, err
 	}
 
-	nonce := app.xfsClient.GetNonce(fromObj.Address)
+	nonce := app.back.XFSClient.GetNonce(fromObj.Address)
 
 	tx.Version = config.Version
 	tx.To = toObj.Address

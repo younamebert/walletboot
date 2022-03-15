@@ -13,7 +13,6 @@ import (
 	"walletboot/config"
 	"walletboot/crypto"
 	"walletboot/dao"
-	"walletboot/storage/badger"
 
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
@@ -25,8 +24,7 @@ type Wallet struct {
 	mu          sync.RWMutex
 	cacheMu     sync.RWMutex
 	defaultAddr common.Address
-	// conn        *httpxfs.Client
-	cache map[common.Address]*ecdsa.PrivateKey
+	cache       map[common.Address]*ecdsa.PrivateKey
 }
 
 type Accounts struct {
@@ -39,21 +37,26 @@ type Accounts struct {
 }
 
 // NewWallet constructs and returns a new Wallet instance with badger db.
-func NewWallet(storage *badger.Storage) (*Wallet, error) {
+func NewWallet(daokeyDB *dao.KeyStoreDB) (*Wallet, error) {
 
 	w := &Wallet{
-		db:    dao.NewKeyStoreDB(storage),
+		db:    daokeyDB,
 		cache: make(map[common.Address]*ecdsa.PrivateKey),
 		// conn:  cli,
 	}
-	w.defaultAddr, _ = w.db.GetDefaultAddress()
 
-	// if err := w.UpdateAccount(); err != nil {
-	// 	return nil, err
-	// }
-	// if err := w.setupTxFrom(); err != nil {
-	// 	return nil, err
-	// }
+	addrdef, err := w.db.GetDefaultAddress()
+	if err != nil {
+		coinbase, err := w.AddByRandom()
+		if err != nil {
+			return nil, err
+		}
+		w.defaultAddr = coinbase
+		if err = w.db.SetDefaultAddress(coinbase); err != nil {
+			return nil, err
+		}
+	}
+	w.defaultAddr = addrdef
 	return w, nil
 }
 
@@ -65,9 +68,10 @@ func (w *Wallet) SetupTxFrom() error {
 			Address: w.defaultAddr.B58String(),
 			Balance: decimal.NewFromInt(0),
 		}
+		// json.Marshal(createWallet)
 		bs, _ := json.Marshal(createWallet)
 		w.db.UpdateAccount(w.defaultAddr, bs)
-		return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", w.defaultAddr.B58String())
+		return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", w.defaultAddr.String())
 	}
 
 	// defaultAddrWallet := &Accounts{}
@@ -75,56 +79,16 @@ func (w *Wallet) SetupTxFrom() error {
 	// 	return err
 	// }
 	if defaultAddrAccount.Balance == decimal.NewFromInt(0) {
+		fmt.Println(456)
 		return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", w.defaultAddr.B58String())
 	}
 	return nil
 }
 
 // Blocks that were successfully traded in the previous block
-func (w *Wallet) UpdateAccount() error {
+// func (w *Wallet) UpdateAccount() error {
 
-	// return w.db.AddrForeach(func(k string, v []byte) error {
-	// 	// Loop to update the status of all users
-	// 	accounts := &Accounts{}
-	// 	// var balance string
-	// 	if err := json.Unmarshal(v, accounts); err != nil {
-	// 		return err
-	// 	}
-
-	// 	req := &getAccountArgs{
-	// 		Address: accounts.Address,
-	// 	}
-
-	// 	chainStatusLast := &Accounts{}
-	// 	if err := w.conn.CallMethod(1, "State.GetAccount", &req, &chainStatusLast); err != nil {
-	// 		return err
-	// 	}
-
-	// 	accounts.Nonce = chainStatusLast.Nonce
-	// 	accounts.Extra = chainStatusLast.Extra
-	// 	accounts.StateRoot = chainStatusLast.StateRoot
-	// 	accounts.Code = chainStatusLast.Code
-	// 	accounts.Balance = chainStatusLast.Balance
-
-	// 	addr := common.B58ToAddress([]byte(accounts.Address))
-
-	// 	_, err := w.db.GetAccount(addr)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	//
-	// 	bs, err := json.Marshal(accounts)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	if err := w.db.UpdateAccount(addr, bs); err != nil {
-	// 		return err
-	// 	}
-	// 	return nil
-	// })\
-	return nil
-}
+// }
 
 func (w *Wallet) Accounts() {
 	iter := w.db.Iterator()
@@ -151,9 +115,9 @@ func (w *Wallet) Accounts() {
 // 	}
 
 // 	var balance string = common.Big0.String()
-// 	req := &getAccountArgs{
-// 		Address: txFrom.Address,
-// 	}
+// req := &getAccountArgs{
+// 	Address: txFrom.Address,
+// }
 // 	err := w.conn.CallMethod(1, "State.GetBalance", &req, &balance)
 // 	if err != nil && err.Error() != "null" {
 // 		// fmt.Printf("err:%v %T\n", err, err)
@@ -191,7 +155,7 @@ func (w *Wallet) GetWalletNewTime(addr common.Address) ([]byte, error) {
 func (w *Wallet) CreateAccount() (common.Address, error) {
 	// max account number
 	if w.GetNumber() >= config.AccountMaxNumber {
-		return common.Address{}, fmt.Errorf("create Account Max Number:%v\n", config.AccountMaxNumber)
+		return common.Address{}, fmt.Errorf("create account max number:%v", config.AccountMaxNumber)
 	}
 
 	addr, err := w.AddByRandom()
@@ -217,9 +181,12 @@ func (w *Wallet) CreateAccount() (common.Address, error) {
 //随机获取账户
 func (w *Wallet) RandomAccessAccount() []*Accounts {
 	var (
-		account []*Accounts = make([]*Accounts, 2)
+		account []*Accounts = make([]*Accounts, 0)
 	)
 	accountLength := w.db.AccountsNumber()
+	if accountLength == 0 {
+		return account
+	}
 	accountIndex := rand.Intn(int(accountLength))
 
 	// account := &Accounts{}
@@ -248,6 +215,9 @@ func (w *Wallet) RandomAccessAccount() []*Accounts {
 	if err != nil {
 		logrus.Warn(err)
 		os.Exit(1)
+	}
+	if len(froms) == 0 {
+		return froms
 	}
 	accountIndexFrom := rand.Intn(len(froms))
 	account = append(account, froms[accountIndexFrom])

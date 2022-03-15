@@ -1,8 +1,12 @@
 package chainmgr
 
 import (
+	"encoding/json"
+	"fmt"
 	"walletboot/chainmgr/client"
+	"walletboot/common"
 	"walletboot/config"
+	"walletboot/dao"
 	"walletboot/serve"
 
 	"github.com/sirupsen/logrus"
@@ -14,6 +18,7 @@ type ChainMgr interface {
 	GetNonce(addr string) int64
 	SendRawTransaction(data string) *string
 	GetAccount(addr string) *serve.Accounts
+	UpdateAccountState() error
 	// GetTxsByBlockHash(blockHash string) []*Transaction
 	// GetBlockHeaderByHash(blockHash string) *BlockHeader
 	// GetAccountInfo(address string) *AccountState
@@ -22,13 +27,59 @@ type ChainMgr interface {
 
 type ChainMgrs struct {
 	xfsClient *client.Client
+	db        *dao.KeyStoreDB
 }
 
-func NewChainMgr() *ChainMgrs {
+func NewChainMgr(daokeyDB *dao.KeyStoreDB) *ChainMgrs {
 	cli := client.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
 	return &ChainMgrs{
 		xfsClient: cli,
+		db:        daokeyDB,
 	}
+}
+
+func (ext *ChainMgrs) UpdateAccountState() error {
+	return ext.db.AddrForeach(func(k string, v []byte) error {
+		// Loop to update the status of all users
+		accounts := &serve.Accounts{}
+		// var balance string
+		if err := json.Unmarshal(v, accounts); err != nil {
+			return err
+		}
+
+		req := &getAccountArgs{
+			Address: accounts.Address,
+		}
+
+		chainStatusLast := &serve.Accounts{}
+		if err := ext.xfsClient.CallMethod(1, "State.GetAccount", &req, &chainStatusLast); err != nil {
+			return err
+		}
+		bs, _ := json.Marshal(chainStatusLast)
+		fmt.Println(string(bs))
+		accounts.Nonce = chainStatusLast.Nonce
+		accounts.Extra = chainStatusLast.Extra
+		accounts.StateRoot = chainStatusLast.StateRoot
+		accounts.Code = chainStatusLast.Code
+		accounts.Balance = chainStatusLast.Balance
+
+		addr := common.B58ToAddress([]byte(accounts.Address))
+
+		_, err := ext.db.GetAccount(addr)
+		if err != nil {
+			return err
+		}
+		//
+		bs, err = json.Marshal(accounts)
+		if err != nil {
+			return err
+		}
+
+		if err := ext.db.UpdateAccount(addr, bs); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (ext *ChainMgrs) CurrentBHeader() *BlockHeader {

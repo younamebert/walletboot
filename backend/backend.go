@@ -2,6 +2,8 @@ package backend
 
 import (
 	"os"
+	"walletboot/chainmgr"
+	"walletboot/dao"
 	"walletboot/initialize"
 	"walletboot/serve"
 
@@ -9,17 +11,18 @@ import (
 )
 
 type Backend struct {
-	Wallet   *serve.Wallet
-	Transfer *serve.Transfer
+	Wallet    *serve.Wallet
+	Transfer  *serve.Transfer
+	XFSClient chainmgr.ChainMgr
 }
 
 func NewBackend() *Backend {
 
 	accountDB := initialize.AccountDB()
 	transferDB := initialize.TransferDB()
-	// cli := httpxfs.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
-
-	wallet, err := serve.NewWallet(accountDB)
+	// cli := client.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
+	daokeyDB := dao.NewKeyStoreDB(accountDB)
+	wallet, err := serve.NewWallet(daokeyDB)
 	if err != nil {
 		logrus.Warn(err)
 		os.Exit(1)
@@ -31,7 +34,8 @@ func NewBackend() *Backend {
 
 	transfer := serve.NewTransfer(transferDB)
 	return &Backend{
-		Wallet:   wallet,
-		Transfer: transfer,
+		Wallet:    wallet,
+		Transfer:  transfer,
+		XFSClient: chainmgr.NewChainMgr(daokeyDB),
 	}
 }

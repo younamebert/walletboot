@@ -12,7 +12,7 @@ var (
 	addrKeyPre        = []byte("addr:")
 	addrAccountPre    = []byte("addrobj:")
 	addNewTime        = []byte("newtime:")
-	defaultAddressKey = []byte("default")
+	defaultAddressKey = []byte("default:")
 )
 
 type KeyStoreDB struct {
@@ -43,10 +43,6 @@ func (db *KeyStoreDB) Foreach(fn func(address common.Address, key *ecdsa.Private
 		fn(addr, pkey)
 		return nil
 	})
-}
-
-func (db *KeyStoreDB) ForIndex(fn func(n int, k []byte, v []byte)) {
-	db.ForIndex(fn)
 }
 
 func (db *KeyStoreDB) AddrForeach(fn func(k string, v []byte) error) error {

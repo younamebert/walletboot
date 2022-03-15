@@ -16,7 +16,7 @@ var (
 	TxLogPrefix         = []byte("txlog:")
 	CronSpec            = "10s"                           // 5s
 	AccountFactor       = new(big.Float).SetFloat64(0.02) // 2%
-	NewAccountNumber    = 0
+	NewAccountNumber    = 1
 	SendTxNumber        = 2
 )
 

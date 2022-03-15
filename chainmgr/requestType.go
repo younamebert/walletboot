@@ -9,6 +9,11 @@ type GetBlockHeaderByNumberArgs struct {
 	//Count  string `json:"count"`
 }
 
+type getAccountArgs struct {
+	RootHash string `json:"root_hash"`
+	Address  string `json:"address"`
+}
+
 // type getAccountByAddrArgs struct {
 // 	RootHash string `json:"root_hash"`
 // 	Address  string `json:"address"`

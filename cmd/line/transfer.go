@@ -1,24 +1,28 @@
 package line
 
-// var (
-// 	daemonCmd = &cobra.Command{
-// 		Use:                   "walletboot [options]",
-// 		DisableFlagsInUseLine: true,
-// 		SilenceUsage:          true,
-// 		Short:                 "Start a send transfer process",
-// 		RunE: func(cmd *cobra.Command, args []string) error {
-// 			return cmd.Help()
-// 		},
-// 	}
-// 	transferBootStartCmd = &cobra.Command{
-// 		Use:                   "Start",
-// 		DisableFlagsInUseLine: true,
-// 		SilenceUsage:          true,
-// 		Short:                 "Start a send transfer process",
-// 		RunE: func(cmd *cobra.Command, args []string) error {
-// 			return start()
-// 		},
-// 	}
+import "github.com/spf13/cobra"
+
+var (
+	daemonCmd = &cobra.Command{
+		Use:                   "walletboot [options]",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 "Start a send transfer process",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+	transferBootStartCmd = &cobra.Command{
+		Use:                   "Start",
+		DisableFlagsInUseLine: true,
+		SilenceUsage:          true,
+		Short:                 "Start a send transfer process",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return start()
+		},
+	}
+)
+
 // 	transferBootStopCmd = &cobra.Command{
 // 		Use:                   "Stop",
 // 		DisableFlagsInUseLine: true,
@@ -39,14 +43,14 @@ package line
 // 	}
 // )
 
-// // process
-// func start() error {
-// 	if err != nil {
-// 		return err
-// 	}
-// 	go task.Start()
-// 	select {}
-// }
+// process
+func start() error {
+	if err != nil {
+		return err
+	}
+	go task.Start()
+	select {}
+}
 
 // func stop() error {
 // 	task.Stop()
@@ -63,10 +67,10 @@ package line
 // 	return nil
 // }
 
-// func init() {
-// 	// mFlags := daemonCmd.PersistentFlags()
-// 	daemonCmd.AddCommand(txlogListCmd)
-// 	daemonCmd.AddCommand(transferBootStartCmd)
-// 	daemonCmd.AddCommand(transferBootStopCmd)
-// 	rootCmd.AddCommand(daemonCmd)
-// }
+func init() {
+	// mFlags := daemonCmd.PersistentFlags()
+	// daemonCmd.AddCommand(txlogListCmd)
+	daemonCmd.AddCommand(transferBootStartCmd)
+	// daemonCmd.AddCommand(transferBootStopCmd)
+	rootCmd.AddCommand(daemonCmd)
+}

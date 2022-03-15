@@ -14,30 +14,34 @@ type Cron struct {
 	quit chan struct{}
 }
 
-func (job *Cron) CronBatchRunRand() {
+func (job *Cron) createAcount() {
 	for i := 0; i < config.NewAccountNumber; i++ {
 		if err := job.app.CreateAccount(); err != nil {
 			// fmt.Println(err)
 			logrus.Warn(err)
-			job.Stop()
+			// job.Stop()
 			// return
 			continue
 		}
 	}
 }
 
-func (job *Cron) CronBatchRunSendTx() {
+func (job *Cron) transfer() {
 	for i := 0; i < config.SendTxNumber; i++ {
 		if err := job.app.SendTransaction(); err != nil {
 			// logrus.Error(err)
 			// job.Stop()
 			// return
 			logrus.Warn(err)
-			job.Stop()
-			// fmt.Println(err)
+			// job.Stop()
 			continue
 		}
 	}
+}
+
+func (job *Cron) RunCarry() {
+	go job.transfer()
+	go job.createAcount()
 }
 
 func New() (*Cron, error) {
@@ -53,7 +57,7 @@ func New() (*Cron, error) {
 }
 
 func (c *Cron) Stop() {
-	close(c.quit)
+	// close(c.quit)
 	// c.quit = make(chan struct{})
 }
 
@@ -72,8 +76,8 @@ out:
 	for {
 		select {
 		case <-time.After(timeDur):
-			c.CronBatchRunRand()
-			c.CronBatchRunSendTx()
+			c.RunCarry()
+			go c.app.UpdateAccountState()
 		case <-c.quit:
 			logrus.Info("Stop for walletboot")
 			c.quit = make(chan struct{})
