@@ -2,7 +2,6 @@ package chainmgr
 
 import (
 	"encoding/json"
-	"fmt"
 	"walletboot/chainmgr/client"
 	"walletboot/common"
 	"walletboot/config"
@@ -123,7 +122,7 @@ func (ext *ChainMgrs) SendRawTransaction(data string) *string {
 	args := &SendRawTxArgs{
 		Data: data,
 	}
-	fmt.Println(args.Data)
+	// fmt.Println(args.Data)
 	if err := ext.xfsClient.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
 		logrus.Warn(err)
 		return nil
