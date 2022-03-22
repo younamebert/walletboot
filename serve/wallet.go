@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"sync"
+	"time"
 	"walletboot/common"
 	"walletboot/config"
 	"walletboot/crypto"
@@ -45,8 +46,7 @@ func NewWallet(daokeyDB *dao.KeyStoreDB) (*Wallet, error) {
 		// conn:  cli,
 	}
 
-	addrdef, err := w.db.GetDefaultAddress()
-	if err != nil {
+	if _, err := w.db.GetDefaultAddress(); err != nil {
 		coinbase, err := w.AddByRandom()
 		if err != nil {
 			return nil, err
@@ -56,31 +56,33 @@ func NewWallet(daokeyDB *dao.KeyStoreDB) (*Wallet, error) {
 			return nil, err
 		}
 	}
-	w.defaultAddr = addrdef
+
+	if err := w.setupTxFrom(); err != nil {
+		return nil, err
+	}
 	return w, nil
 }
 
 //There must be an initialized from
-func (w *Wallet) SetupTxFrom() error {
-	defaultAddrAccount, err := w.GetAccount(w.defaultAddr)
+func (w *Wallet) setupTxFrom() error {
+	addrdef, err := w.db.GetDefaultAddress()
+	if err != nil {
+		return err
+	}
+	w.defaultAddr = addrdef
+	defaultAddrAccount, err := w.GetAccount(addrdef)
 	if err != nil {
 		createWallet := &Accounts{
-			Address: w.defaultAddr.B58String(),
+			Address: addrdef.B58String(),
 			Balance: decimal.NewFromInt(0),
 		}
 		// json.Marshal(createWallet)
 		bs, _ := json.Marshal(createWallet)
-		w.db.UpdateAccount(w.defaultAddr, bs)
-		return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", w.defaultAddr.String())
+		w.db.UpdateAccount(addrdef, bs)
+		return fmt.Errorf("2 no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", addrdef.String())
 	}
-
-	// defaultAddrWallet := &Accounts{}
-	// if err := json.Unmarshal(val, &defaultAddrWallet); err != nil {
-	// 	return err
-	// }
 	if defaultAddrAccount.Balance == decimal.NewFromInt(0) {
-		fmt.Println(456)
-		return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", w.defaultAddr.B58String())
+		return fmt.Errorf("3 no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", addrdef.B58String())
 	}
 	return nil
 }
@@ -104,40 +106,6 @@ func (w *Wallet) Accounts() {
 	bs, _ := common.MarshalIndent(accounts)
 	fmt.Println(string(bs))
 }
-
-// func (w *Wallet) checkTxFrom(txobj []byte) ([]byte, error) {
-
-// 	addrPrefix := []byte("setupfrom:")
-
-// 	txFrom := &Accounts{}
-// 	if err := json.Unmarshal(txobj, txFrom); err != nil {
-// 		return nil, err
-// 	}
-
-// 	var balance string = common.Big0.String()
-// req := &getAccountArgs{
-// 	Address: txFrom.Address,
-// }
-// 	err := w.conn.CallMethod(1, "State.GetBalance", &req, &balance)
-// 	if err != nil && err.Error() != "null" {
-// 		// fmt.Printf("err:%v %T\n", err, err)
-// 		return nil, err
-// 	}
-
-// 	txFrom.Balance = balance
-// 	bs, err := json.Marshal(txFrom)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if err := w.db.Set(addrPrefix, bs); err != nil {
-// 		return nil, err
-// 	}
-// 	address := common.B58ToAddress([]byte(txFrom.Address))
-// 	if err := w.db.UpdateAccount(address, bs); err != nil {
-// 		return nil, err
-// 	}
-// 	return bs, nil
-// }
 
 // AddByRandom constructs a new Wallet with a random number and retuens the its address.
 func (w *Wallet) AddByRandom() (common.Address, error) {
@@ -181,15 +149,14 @@ func (w *Wallet) CreateAccount() (common.Address, error) {
 //随机获取账户
 func (w *Wallet) RandomAccessAccount() []*Accounts {
 	var (
-		account []*Accounts = make([]*Accounts, 0)
+		accounts []*Accounts = make([]*Accounts, 0)
 	)
 	accountLength := w.db.AccountsNumber()
 	if accountLength == 0 {
-		return account
+		return accounts
 	}
-	accountIndex := rand.Intn(int(accountLength))
-
-	// account := &Accounts{}
+	rand.Seed(time.Now().UnixNano())
+	accountIndex := rand.Intn(int(accountLength) - 1)
 	froms := make([]*Accounts, 0)
 
 	i := 0
@@ -198,11 +165,11 @@ func (w *Wallet) RandomAccessAccount() []*Accounts {
 		if err := json.Unmarshal(v, &account); err != nil {
 			return err
 		}
-		// get transfer to obj
 		if i == accountIndex {
 			if err := json.Unmarshal(v, &account); err != nil {
 				return err
 			}
+			accounts = append(accounts, account)
 		} else {
 			if account.Balance.BigInt().Cmp(big.NewInt(0)) > 0 {
 				froms = append(froms, account)
@@ -220,63 +187,9 @@ func (w *Wallet) RandomAccessAccount() []*Accounts {
 		return froms
 	}
 	accountIndexFrom := rand.Intn(len(froms))
-	account = append(account, froms[accountIndexFrom])
-	return account
+	accounts = append(accounts, froms[accountIndexFrom])
+	return accounts
 }
-
-// func (w *Wallet) UpdateAccout(addr common.Address, account *Accounts) error {
-// 	_, err := w.db.GetAccount(addr)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	bs, err := json.Marshal(account)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return w.db.UpdateAccount(addr, bs)
-// }
-
-// func (w *Wallet) RandAddr() (string, map[string]string) {
-// 	// 获取账户,数量
-// 	maxLenTo := w.db.AccountsNumber()
-// 	fmt.Println(maxLenTo)
-// 	addrFrom := make(map[string]string)
-// 	Froms := make([]map[string]string, 0)
-// 	if maxLenTo == 0 {
-// 		return "", addrFrom
-// 	}
-// 	indexRandTo := rand.Intn(int(maxLenTo))
-// 	addrTo := ""
-
-// 	info := &Accounts{}
-// 	i := 0
-
-// 	err := w.db.AddrForeach(func(k string, v []byte) error {
-// 		if err := json.Unmarshal(v, &info); err != nil {
-// 			return err
-// 		}
-// 		if i == indexRandTo {
-// 			addrTo = info.Address
-// 		}
-// 		if common.BigEqual(info.Balance, common.Big0.String()) == 1 {
-// 			addrFrom[info.Address] = info.Balance
-// 			Froms = append(Froms, addrFrom)
-// 		}
-// 		i++
-// 		return nil
-// 	})
-// 	if err != nil {
-// 		return "", addrFrom
-// 	}
-
-// 	maxLenFrom := len(Froms)
-// 	if maxLenFrom < 1 {
-// 		return addrTo, addrFrom
-// 	}
-
-// 	indexRandFrom := rand.Intn(maxLenFrom)
-// 	return addrTo, Froms[indexRandFrom]
-// }
 
 func (w *Wallet) GetNumber() int {
 	i := 0
@@ -286,28 +199,6 @@ func (w *Wallet) GetNumber() int {
 	}
 	return i
 }
-
-// func (w *Wallet) Getfroms() ([]map[string]string, error) {
-// 	addrFrom := make(map[string]string)
-// 	Froms := make([]map[string]string, 0)
-
-// 	info := &Accounts{}
-// 	i := 0
-// 	iter := w.db.Iterator()
-// 	for iter.Next() {
-
-// 		if err := json.Unmarshal(iter.Val(), &info); err != nil {
-// 			return nil, err
-// 		}
-
-// 		if common.BigEqual(info.Balance, common.Big0.String()) == 1 {
-// 			addrFrom[info.Address] = info.Balance
-// 			Froms = append(Froms, addrFrom)
-// 		}
-// 		i++
-// 	}
-// 	return Froms, nil
-// }
 
 func (w *Wallet) GetAccount(addr common.Address) (*Accounts, error) {
 	val, err := w.db.GetAccount(addr)

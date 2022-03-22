@@ -4,13 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"strconv"
 	"walletboot/backend"
 	"walletboot/common"
 	"walletboot/config"
 	"walletboot/serve"
 
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,14 +41,18 @@ func (app *App) UpdateAccountState() error {
 
 //Send transaction
 func (app *App) SendTransaction() error {
-
+	if err := app.back.XFSClient.UpdateAccountState(); err != nil {
+		return err
+	}
 	accounts := app.back.Wallet.RandomAccessAccount()
 
 	if len(accounts) == 0 {
 		defaultAddr := app.back.Wallet.GetDefault()
-		return fmt.Errorf("no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", defaultAddr.B58String())
+		return fmt.Errorf("1 no user with from qualification was found in the wallet launcher. Please add XFS coins to this address:%v", defaultAddr.B58String())
 	}
-
+	if len(accounts) > 2 {
+		return fmt.Errorf("transaction attribute from or to does not meet the conditions")
+	}
 	tx, req, err := app.NewTransaction(accounts[0], accounts[1])
 	if err != nil {
 		return err
@@ -90,19 +94,14 @@ func (app *App) NewTransaction(toObj, fromObj *serve.Accounts) (*serve.SendTrans
 		return nil, nil, err
 	}
 	req.Data = base64.StdEncoding.EncodeToString(bs)
-
 	return tx, req, nil
 }
 
 func (app *App) randAmount(val string) string {
-
-	result := big.NewFloat(0)
-
-	bal, err := common.Atto2BaseRatCoin(val)
+	bal, err := decimal.NewFromString(val)
 	if err != nil {
 		return "0"
 	}
-	result = result.Mul(bal, config.AccountFactor)
-
+	result := bal.Div(config.AccountFactor)
 	return result.String()
 }

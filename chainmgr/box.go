@@ -42,8 +42,8 @@ func (ext *ChainMgrs) UpdateAccountState() error {
 	return ext.db.AddrForeach(func(k string, v []byte) error {
 		// Loop to update the status of all users
 		accounts := &serve.Accounts{}
-		// var balance string
-		if err := json.Unmarshal(v, accounts); err != nil {
+
+		if err := json.Unmarshal(v, &accounts); err != nil {
 			return err
 		}
 
@@ -55,8 +55,6 @@ func (ext *ChainMgrs) UpdateAccountState() error {
 		if err := ext.xfsClient.CallMethod(1, "State.GetAccount", &req, &chainStatusLast); err != nil {
 			return err
 		}
-		bs, _ := json.Marshal(chainStatusLast)
-		fmt.Println(string(bs))
 		accounts.Nonce = chainStatusLast.Nonce
 		accounts.Extra = chainStatusLast.Extra
 		accounts.StateRoot = chainStatusLast.StateRoot
@@ -70,7 +68,7 @@ func (ext *ChainMgrs) UpdateAccountState() error {
 			return err
 		}
 		//
-		bs, err = json.Marshal(accounts)
+		bs, err := json.Marshal(accounts)
 		if err != nil {
 			return err
 		}
@@ -125,6 +123,7 @@ func (ext *ChainMgrs) SendRawTransaction(data string) *string {
 	args := &SendRawTxArgs{
 		Data: data,
 	}
+	fmt.Println(args.Data)
 	if err := ext.xfsClient.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
 		logrus.Warn(err)
 		return nil

@@ -17,20 +17,18 @@ type Backend struct {
 }
 
 func NewBackend() *Backend {
-
 	accountDB := initialize.AccountDB()
 	transferDB := initialize.TransferDB()
-	// cli := client.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
 	daokeyDB := dao.NewKeyStoreDB(accountDB)
 	wallet, err := serve.NewWallet(daokeyDB)
 	if err != nil {
 		logrus.Warn(err)
 		os.Exit(1)
 	}
-	if err := wallet.SetupTxFrom(); err != nil {
-		logrus.Warn(err)
-		os.Exit(1)
-	}
+	// if err := wallet.SetupTxFrom(); err != nil {
+	// 	logrus.Warn(err)
+	// 	os.Exit(1)
+	// }
 
 	transfer := serve.NewTransfer(transferDB)
 	return &Backend{
