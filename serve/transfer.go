@@ -10,7 +10,6 @@ import (
 	"walletboot/common/ahash"
 	"walletboot/config"
 	"walletboot/crypto"
-	"walletboot/httpxfs"
 	"walletboot/storage/badger"
 )
 
@@ -29,13 +28,12 @@ type SendRawTxArgs struct {
 	Data string `json:"data"`
 }
 
-type GetAccountArgs struct {
-	Address string `json:"address"`
-}
+// type GetAccountArgs struct {
+// 	Address string `json:"address"`
+// }
 
 type Transfer struct {
-	TxDb          badger.IStorage
-	conn          *httpxfs.Client
+	txDB          badger.IStorage
 	CurrentHeight string
 	CurrentHash   string
 }
@@ -47,10 +45,9 @@ type Txlog struct {
 	CurrentHash   string
 }
 
-func NewTxSend(txDb badger.IStorage, cli *httpxfs.Client) *Transfer {
+func NewTransfer(txDb badger.IStorage) *Transfer {
 	return &Transfer{
-		TxDb: txDb,
-		conn: cli,
+		txDB: txDb,
 	}
 }
 
@@ -104,41 +101,41 @@ func (t *Transfer) SignHash(tx *SendTransaction, key *ecdsa.PrivateKey) (string,
 	return hex.EncodeToString(sig), nil
 }
 
-func (t *Transfer) SendTransactionFunc(args *SendRawTxArgs) (string, error) {
-	var txhash string
+// func (t *Transfer) SendTransactionFunc(args *SendRawTxArgs) (string, error) {
+// 	var txhash string
 
-	if err := t.updateWriteMsg(); err != nil {
-		return "", err
-	}
+// 	if err := t.updateWriteMsg(); err != nil {
+// 		return "", err
+// 	}
 
-	if err := t.conn.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
-		return "", err
-	}
-	return txhash, nil
-}
+// 	if err := t.conn.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
+// 		return "", err
+// 	}
+// 	return txhash, nil
+// }
 
-func (t *Transfer) GetNonce(addr string) (string, error) {
-	req := &GetAddrNonceByHashArgs{
-		Address: addr,
-	}
-	var result string
-	if err := t.conn.CallMethod(1, "TxPool.GetAddrTxNonce", &req, &result); err != nil {
-		return "", err
-	}
-	return result, nil
-}
+// func (t *Transfer) GetNonce(addr string) (string, error) {
+// 	req := &GetAddrNonceByHashArgs{
+// 		Address: addr,
+// 	}
+// 	var result string
+// 	if err := t.conn.CallMethod(1, "TxPool.GetAddrTxNonce", &req, &result); err != nil {
+// 		return "", err
+// 	}
+// 	return result, nil
+// }
 
-func (t *Transfer) updateWriteMsg() error {
-	head := make(map[string]interface{})
-	err := t.conn.CallMethod(1, "Chain.Head", nil, &head)
-	if err != nil {
-		return err
-	}
+// func (t *Transfer) updateWriteMsg() error {
+// 	head := make(map[string]interface{})
+// 	err := t.conn.CallMethod(1, "Chain.Head", nil, &head)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	t.CurrentHash = head["hash"].(string)
-	t.CurrentHeight = fmt.Sprint(head["height"])
-	return nil
-}
+// 	t.CurrentHash = head["hash"].(string)
+// 	t.CurrentHeight = fmt.Sprint(head["height"])
+// 	return nil
+// }
 
 func (t *Transfer) WriteTxLog(txhash string, args *SendTransaction) error {
 
@@ -154,12 +151,12 @@ func (t *Transfer) WriteTxLog(txhash string, args *SendTransaction) error {
 		return err
 	}
 	key := append(config.TxLogPrefix, []byte(txhash)...)
-	return t.TxDb.SetData(key, bs)
+	return t.txDB.SetData(key, bs)
 }
 
 func (t *Transfer) ListTxLog() []string {
 	result := []string{}
-	t.TxDb.PrefixForeachData(config.TxLogPrefix, func(k, v []byte) error {
+	t.txDB.PrefixForeachData(config.TxLogPrefix, func(k, v []byte) error {
 		result = append(result, string(k))
 		return nil
 	})

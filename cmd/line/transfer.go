@@ -1,11 +1,6 @@
 package line
 
-import (
-	"fmt"
-	"walletboot/common"
-
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 var (
 	daemonCmd = &cobra.Command{
@@ -26,25 +21,27 @@ var (
 			return start()
 		},
 	}
-	transferBootStopCmd = &cobra.Command{
-		Use:                   "Stop",
-		DisableFlagsInUseLine: true,
-		SilenceUsage:          true,
-		Short:                 "Stop a send transfer process",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return stop()
-		},
-	}
-	txlogListCmd = &cobra.Command{
-		Use:                   "Stop",
-		DisableFlagsInUseLine: true,
-		SilenceUsage:          true,
-		Short:                 "Stop a send transfer process",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return txlogList()
-		},
-	}
 )
+
+// 	transferBootStopCmd = &cobra.Command{
+// 		Use:                   "Stop",
+// 		DisableFlagsInUseLine: true,
+// 		SilenceUsage:          true,
+// 		Short:                 "Stop a send transfer process",
+// 		RunE: func(cmd *cobra.Command, args []string) error {
+// 			return stop()
+// 		},
+// 	}
+// 	txlogListCmd = &cobra.Command{
+// 		Use:                   "Stop",
+// 		DisableFlagsInUseLine: true,
+// 		SilenceUsage:          true,
+// 		Short:                 "Stop a send transfer process",
+// 		RunE: func(cmd *cobra.Command, args []string) error {
+// 			return txlogList()
+// 		},
+// 	}
+// )
 
 // process
 func start() error {
@@ -55,25 +52,25 @@ func start() error {
 	select {}
 }
 
-func stop() error {
-	task.Stop()
-	return nil
-}
+// func stop() error {
+// 	task.Stop()
+// 	return nil
+// }
 
-func txlogList() error {
-	txlogjson := task.AppCore().Transfer.ListTxLog()
-	bs, err := common.MarshalIndent(txlogjson)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%v\n", string(bs))
-	return nil
-}
+// func txlogList() error {
+// 	txlogjson := task.AppCore().Transfer.ListTxLog()
+// 	bs, err := common.MarshalIndent(txlogjson)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	fmt.Printf("%v\n", string(bs))
+// 	return nil
+// }
 
 func init() {
 	// mFlags := daemonCmd.PersistentFlags()
-	daemonCmd.AddCommand(txlogListCmd)
+	// daemonCmd.AddCommand(txlogListCmd)
 	daemonCmd.AddCommand(transferBootStartCmd)
-	daemonCmd.AddCommand(transferBootStopCmd)
+	// daemonCmd.AddCommand(transferBootStopCmd)
 	rootCmd.AddCommand(daemonCmd)
 }

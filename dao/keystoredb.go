@@ -12,7 +12,7 @@ var (
 	addrKeyPre        = []byte("addr:")
 	addrAccountPre    = []byte("addrobj:")
 	addNewTime        = []byte("newtime:")
-	defaultAddressKey = []byte("default")
+	defaultAddressKey = []byte("default:")
 )
 
 type KeyStoreDB struct {
