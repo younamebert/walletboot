@@ -128,7 +128,7 @@ func (ext *ChainMgrs) SendRawTransaction(data string) *string {
 	}
 	// fmt.Println(args.Data)
 	if err := ext.xfsClient.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
-		logrus.Warnf("SendRawTransaction err:%v", err)
+		logrus.Warnf("SendRawTransaction err:%v tx object:%v", err, args.Data)
 		return nil
 	}
 	return txhash

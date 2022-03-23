@@ -104,5 +104,5 @@ func (app *App) randAmount(val string) string {
 		return "0"
 	}
 	result := bal.Div(config.AccountFactor)
-	return result.String()
+	return result.Round(0).String()
 }
