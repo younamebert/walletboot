@@ -180,7 +180,7 @@ func (w *Wallet) RandomAccessAccount() []*Accounts {
 	})
 
 	if err != nil {
-		logrus.Warn(err)
+		logrus.Warnf("RandomAccessAccount err:%v", err)
 		os.Exit(1)
 	}
 	if len(froms) == 0 {

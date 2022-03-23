@@ -18,7 +18,7 @@ func (job *Cron) createAcount() {
 	for i := 0; i < config.NewAccountNumber; i++ {
 		if err := job.app.CreateAccount(); err != nil {
 			// fmt.Println(err)
-			logrus.Warn(err)
+			logrus.Warnf("create err:%v", err)
 			// job.Stop()
 			// return
 			continue
@@ -32,7 +32,7 @@ func (job *Cron) transfer() {
 			// logrus.Error(err)
 			// job.Stop()
 			// return
-			logrus.Warn(err)
+			logrus.Warnf("sendtransfer err:%v", err)
 			// job.Stop()
 			continue
 		}

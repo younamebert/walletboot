@@ -46,7 +46,7 @@ func (ext *ChainMgrs) UpdateAccountState() error {
 			return err
 		}
 
-		req := &getAccountArgs{
+		req := &GetAccountArgs{
 			Address: accounts.Address,
 		}
 
@@ -54,26 +54,30 @@ func (ext *ChainMgrs) UpdateAccountState() error {
 		if err := ext.xfsClient.CallMethod(1, "State.GetAccount", &req, &chainStatusLast); err != nil {
 			return err
 		}
-		accounts.Nonce = chainStatusLast.Nonce
-		accounts.Extra = chainStatusLast.Extra
-		accounts.StateRoot = chainStatusLast.StateRoot
-		accounts.Code = chainStatusLast.Code
-		accounts.Balance = chainStatusLast.Balance
 
-		addr := common.B58ToAddress([]byte(accounts.Address))
+		if chainStatusLast != nil {
 
-		_, err := ext.db.GetAccount(addr)
-		if err != nil {
-			return err
-		}
-		//
-		bs, err := json.Marshal(accounts)
-		if err != nil {
-			return err
-		}
+			accounts.Nonce = chainStatusLast.Nonce
+			accounts.Extra = chainStatusLast.Extra
+			accounts.StateRoot = chainStatusLast.StateRoot
+			accounts.Code = chainStatusLast.Code
+			accounts.Balance = chainStatusLast.Balance
 
-		if err := ext.db.UpdateAccount(addr, bs); err != nil {
-			return err
+			addr := common.B58ToAddress([]byte(accounts.Address))
+
+			_, err := ext.db.GetAccount(addr)
+			if err != nil {
+				return err
+			}
+			//
+			bs, err := json.Marshal(accounts)
+			if err != nil {
+				return err
+			}
+
+			if err := ext.db.UpdateAccount(addr, bs); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -96,7 +100,7 @@ func (ext *ChainMgrs) GetReceiptByHash(txhash string) *Receipt {
 	}
 	recs := new(Receipt)
 	if err := ext.xfsClient.CallMethod(1, "Chain.GetReceiptByHash", &req, &recs); err != nil {
-		logrus.Warn(err)
+		logrus.Warnf("getreceipt err:%v", err)
 		return nil
 	}
 	if recs != nil {
@@ -111,7 +115,7 @@ func (ext *ChainMgrs) GetNonce(addr string) int64 {
 	}
 	var result int64 = 0
 	if err := ext.xfsClient.CallMethod(1, "TxPool.GetAddrTxNonce", &req, &result); err != nil {
-		logrus.Warn(err)
+		logrus.Warnf("getaddrtxnonce err:%v", err)
 		return result
 	}
 	return result
@@ -124,7 +128,7 @@ func (ext *ChainMgrs) SendRawTransaction(data string) *string {
 	}
 	// fmt.Println(args.Data)
 	if err := ext.xfsClient.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
-		logrus.Warn(err)
+		logrus.Warnf("SendRawTransaction err:%v", err)
 		return nil
 	}
 	return txhash

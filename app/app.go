@@ -57,6 +57,7 @@ func (app *App) SendTransaction() error {
 	if err != nil {
 		return err
 	}
+
 	hash := app.back.XFSClient.SendRawTransaction(req.Data)
 	if hash != nil {
 		if err := app.back.Transfer.WriteTxLog(*hash, tx); err != nil {

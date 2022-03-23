@@ -11,7 +11,7 @@ import (
 func AccountDB() *badger.Storage {
 	accountsDB, err := badger.New(config.LoadAccountsDbPath)
 	if err != nil {
-		logrus.Warn(err)
+		logrus.Warnf("new account db err:%v", err)
 		os.Exit(1)
 	}
 	return accountsDB
@@ -20,7 +20,7 @@ func AccountDB() *badger.Storage {
 func TransferDB() *badger.Storage {
 	transferDB, err := badger.New(config.TxDbPath)
 	if err != nil {
-		logrus.Warn(err)
+		logrus.Warnf("new transfer log db:err%v", err)
 		os.Exit(1)
 	}
 	return transferDB

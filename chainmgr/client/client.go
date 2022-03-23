@@ -86,6 +86,10 @@ func (cli *Client) CallMethod(id int, methodname string, params interface{}, out
 		return err
 	}
 
+	// if resp["result"] == nil {
+	// 	return nil
+	// }
+
 	if string(bsErr) != "null" {
 		return fmt.Errorf(string(bsErr))
 	}

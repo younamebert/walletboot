@@ -12,7 +12,7 @@ var (
 	DbPath              = "./Db"
 	LoadAccountsDbPath  = DbPath + "/LoadAccountsDb"
 	TxDbPath            = DbPath + "/txDb"
-	RpcClientApiHost    = "http://127.0.0.1:9014/"
+	RpcClientApiHost    = "https://api.scan.xfs.tech/jsonrpc/v2" //"http://127.0.0.1:9012/" 本地的
 	RpcClientApiTimeOut = "180s"
 	AccountMaxNumber    = 100
 	TxLogPrefix         = []byte("txlog:")

@@ -9,7 +9,7 @@ type GetBlockHeaderByNumberArgs struct {
 	//Count  string `json:"count"`
 }
 
-type getAccountArgs struct {
+type GetAccountArgs struct {
 	RootHash string `json:"root_hash"`
 	Address  string `json:"address"`
 }
@@ -23,10 +23,10 @@ type SendRawTxArgs struct {
 	Data string `json:"data"`
 }
 
-type GetAccountArgs struct {
-	RootHash string `json:"root_hash"`
-	Address  string `json:"address"`
-}
+// type GetAccountArgs struct {
+// 	RootHash string `json:"root_hash"`
+// 	Address  string `json:"address"`
+// }
 
 // type GetAccountArgs struct {
 // 	Address string `json:"address"`
