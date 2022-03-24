@@ -8,18 +8,20 @@ import (
 )
 
 var (
-	Version             = "0"
-	DbPath              = "./Db"
-	LoadAccountsDbPath  = DbPath + "/LoadAccountsDb"
-	TxDbPath            = DbPath + "/txDb"
-	RpcClientApiHost    = "https://api.scan.xfs.tech/jsonrpc/v2" //"http://127.0.0.1:9012/" 本地的
-	RpcClientApiTimeOut = "180s"
-	AccountMaxNumber    = 100
-	TxLogPrefix         = []byte("txlog:")
-	CronSpec            = "10s"                   // 5s
-	AccountFactor       = decimal.NewFromInt(200) // 2%
-	NewAccountNumber    = 1
-	SendTxNumber        = 2
+	Version                = "0"
+	DbPath                 = "./Db"
+	LoadAccountsDbPath     = DbPath + "/LoadAccountsDb"
+	TxDbPath               = DbPath + "/txDb"
+	RpcClientApiHost       = "https://api.scan.xfs.tech/jsonrpc/v2" //"http://127.0.0.1:9012/" 本地的
+	RpcClientApiTimeOut    = "180s"
+	AccountMaxNumber       = 100
+	TxLogPrefix            = []byte("txlog:")
+	CronSpec               = "10s"                   // 5s
+	AccountFactor          = decimal.NewFromInt(200) // 2%
+	BlockTxPoolMaxSize     = int64(100)
+	BlockTxPoolMaxSizeShow = true // 打开交易size极限条件
+	NewAccountNumber       = 1
+	SendTxNumber           = 2
 )
 
 var (

@@ -41,6 +41,13 @@ func (app *App) UpdateAccountState() error {
 
 //Send transaction
 func (app *App) SendTransaction() error {
+	if config.BlockTxPoolMaxSizeShow {
+		txpoolSize := app.back.XFSClient.TxPoolPendingSize()
+		if txpoolSize >= config.BlockTxPoolMaxSize {
+			return fmt.Errorf("walletboot BlockTxPoolMaxSize :%v", txpoolSize)
+		}
+	}
+
 	if err := app.back.XFSClient.UpdateAccountState(); err != nil {
 		return err
 	}
