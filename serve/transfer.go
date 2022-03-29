@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"walletboot/common"
 	"walletboot/common/ahash"
 	"walletboot/config"
@@ -51,26 +50,6 @@ func NewTransfer(txDb badger.IStorage) *Transfer {
 	}
 }
 
-func sortAndEncodeMap(data map[string]string) string {
-	mapkeys := make([]string, 0)
-	for k := range data {
-		mapkeys = append(mapkeys, k)
-	}
-	sort.Strings(mapkeys)
-	strbuf := ""
-	for i, key := range mapkeys {
-		val := data[key]
-		if val == "" {
-			continue
-		}
-		strbuf += fmt.Sprintf("%s=%s", key, val)
-		if i < len(mapkeys)-1 {
-			strbuf += "&"
-		}
-	}
-	return strbuf
-}
-
 func (t *Transfer) SignHash(tx *SendTransaction, key *ecdsa.PrivateKey) (string, error) {
 
 	data := ""
@@ -87,7 +66,7 @@ func (t *Transfer) SignHash(tx *SendTransaction, key *ecdsa.PrivateKey) (string,
 		"nonce":     tx.Nonce,
 		"value":     tx.Value,
 	}
-	enc := sortAndEncodeMap(tmp)
+	enc := common.SortAndEncodeMap(tmp)
 
 	if enc == "" {
 		return "", fmt.Errorf("SignHash sort error")

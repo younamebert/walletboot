@@ -1,6 +1,7 @@
 package chainmgr
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"walletboot/chainmgr/client"
 	"walletboot/common"
@@ -18,6 +19,7 @@ type ChainMgr interface {
 	SendRawTransaction(data string) *string
 	GetAccount(addr string) *serve.Accounts
 	UpdateAccountState() error
+	TxPoolPendingSize() int64
 	// GetTxsByBlockHash(blockHash string) []*Transaction
 	// GetBlockHeaderByHash(blockHash string) *BlockHeader
 	// GetAccountInfo(address string) *AccountState
@@ -35,6 +37,12 @@ func NewChainMgr(daokeyDB *dao.KeyStoreDB) *ChainMgrs {
 		xfsClient: cli,
 		db:        daokeyDB,
 	}
+}
+
+func (ext *ChainMgrs) TxPoolPendingSize() int64 {
+	var TxPoolSize *int64
+	ext.xfsClient.CallMethod(1, "TxPool.GetPendingSize", nil, &TxPoolSize)
+	return *TxPoolSize
 }
 
 func (ext *ChainMgrs) UpdateAccountState() error {
@@ -128,7 +136,8 @@ func (ext *ChainMgrs) SendRawTransaction(data string) *string {
 	}
 	// fmt.Println(args.Data)
 	if err := ext.xfsClient.CallMethod(1, "TxPool.SendRawTransaction", args, &txhash); err != nil {
-		logrus.Warnf("SendRawTransaction err:%v tx object:%v", err, args.Data)
+		bs, _ := base64.RawStdEncoding.DecodeString(args.Data)
+		logrus.Warnf("SendRawTransaction err:%v tx object:%v", err, string(bs))
 		return nil
 	}
 	return txhash

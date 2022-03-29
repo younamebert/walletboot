@@ -17,14 +17,15 @@ package line
 // 			return cmd.Help()
 // 		},
 // 	}
-// 	walletFormsCommand = &cobra.Command{
-// 		Use:                   "list [options]",
+
+// 	walletGetAddrPriKeyCommand = &cobra.Command{
+// 		Use:                   "addrprikey <address>",
 // 		DisableFlagsInUseLine: true,
-// 		Short:                 "get wallet address list",
-// 		RunE: func(cmd *cobra.Command, args []string) error {
-// 			return walletForms()
-// 		},
+// 		Short:                 "get account address prikey ",
+// 		RunE:                  getAddrPriKey,
 // 	}
+// )
+
 // 	walletNumberCommand = &cobra.Command{
 // 		Use:                   "accountNumber [options]",
 // 		DisableFlagsInUseLine: true,
@@ -48,6 +49,12 @@ package line
 // 	return nil
 // }
 
+// func getAddrPriKey(cmd *cobra.Command, args []string) error {
+// 	// cli := client.NewClient(config.RpcClientApiHost, config.RpcClientApiTimeOut)
+// 	// cli.CallMethod()
+// 	return nil
+// }
+
 // func walletNumber() error {
 // 	number := task.AppCore().Wallet.GetNumber()
 // 	fmt.Printf("%v\n", number)
@@ -55,7 +62,7 @@ package line
 // }
 
 // func init() {
-// 	walletCommand.AddCommand(walletNumberCommand)
-// 	walletCommand.AddCommand(walletFormsCommand)
+// 	// walletCommand.AddCommand(walletNumberCommand)
+// 	walletCommand.AddCommand(walletGetAddrPriKeyCommand)
 // 	rootCmd.AddCommand(walletCommand)
 // }

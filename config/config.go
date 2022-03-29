@@ -18,10 +18,10 @@ var (
 	TxLogPrefix            = []byte("txlog:")
 	CronSpec               = "10s"                   // 5s
 	AccountFactor          = decimal.NewFromInt(200) // 2%
-	BlockTxPoolMaxSize     = int64(100)
+	BlockTxPoolMaxSize     = int64(10)
 	BlockTxPoolMaxSizeShow = true // 打开交易size极限条件
-	NewAccountNumber       = 1
-	SendTxNumber           = 2
+	NewAccountNumber       = 0
+	SendTxNumber           = 1
 )
 
 var (
