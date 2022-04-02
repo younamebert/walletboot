@@ -2,6 +2,7 @@ package config
 
 import (
 	"math/big"
+	"math/rand"
 	"walletboot/common"
 
 	"github.com/shopspring/decimal"
@@ -16,9 +17,9 @@ var (
 	RpcClientApiTimeOut    = "180s"
 	AccountMaxNumber       = 100
 	TxLogPrefix            = []byte("txlog:")
-	CronSpec               = "10s"                   // 5s
+	CronSpec               = "20s"                   // 5s
 	AccountFactor          = decimal.NewFromInt(200) // 2%
-	BlockTxPoolMaxSize     = int64(10)
+	BlockTxPoolMaxSize     = int64(30)
 	BlockTxPoolMaxSizeShow = true // 打开交易size极限条件
 	NewAccountNumber       = 0
 	SendTxNumber           = 1
@@ -26,9 +27,12 @@ var (
 
 var (
 	TxGas      = big.NewInt(25000)
-	TxGasPrice = big.NewInt(10)
+	TxGasPrice = big.NewInt(randGasPrice())
 )
 
+func randGasPrice() int64 {
+	return int64(rand.Intn(20) + 10)
+}
 func DefaultGasPrice() *big.Int {
 	return common.NanoCoin2Atto(TxGasPrice)
 }

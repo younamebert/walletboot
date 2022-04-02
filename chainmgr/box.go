@@ -41,7 +41,10 @@ func NewChainMgr(daokeyDB *dao.KeyStoreDB) *ChainMgrs {
 
 func (ext *ChainMgrs) TxPoolPendingSize() int64 {
 	var TxPoolSize *int64
-	ext.xfsClient.CallMethod(1, "TxPool.GetPendingSize", nil, &TxPoolSize)
+	if err := ext.xfsClient.CallMethod(1, "TxPool.GetPendingSize", nil, &TxPoolSize); err != nil {
+		logrus.Warnf("TxPoolPendingSize err:%v", err)
+		return config.BlockTxPoolMaxSize
+	}
 	return *TxPoolSize
 }
 
