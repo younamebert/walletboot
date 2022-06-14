@@ -1,6 +1,7 @@
 package bootcron
 
 import (
+	"sync"
 	"time"
 	"walletboot/app"
 	"walletboot/config"
@@ -11,6 +12,7 @@ import (
 type Cron struct {
 	app  *app.App
 	spec string
+	rw   sync.RWMutex
 	quit chan struct{}
 }
 
@@ -27,6 +29,8 @@ func (job *Cron) createAcount() {
 }
 
 func (job *Cron) transfer() {
+	job.rw.Lock()
+	defer job.rw.Unlock()
 	for i := 0; i < config.SendTxNumber; i++ {
 		if err := job.app.SendTransaction(); err != nil {
 			// logrus.Error(err)
@@ -34,7 +38,7 @@ func (job *Cron) transfer() {
 			// return
 			logrus.Warnf("sendtransfer err:%v", err)
 			// job.Stop()
-			continue
+			// return
 		}
 	}
 }
