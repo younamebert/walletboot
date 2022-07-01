@@ -47,8 +47,20 @@ func (c *AppCore) RunRand() {
 	}
 }
 
+func (c *AppCore) Run() error {
+	if err := c.Wallet.TxFroms(); err != nil {
+		logrus.Error(err)
+		return nil
+	}
+	return nil
+}
+
 // 发送交易
 func (c *AppCore) RunSendTx() {
+	if err := c.SendTx.GetTxPoolPending(); err != nil {
+		logrus.Error(err)
+		return
+	}
 	request := &serve.SendTransactionArgs{
 		To: c.Wallet.GetTxTo(),
 	}

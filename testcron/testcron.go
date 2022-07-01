@@ -27,6 +27,12 @@ func (job *Cron) CronBatchRunSendTx() {
 	}
 }
 
+func (job *Cron) Run() {
+	job.appcore.Run()
+	job.CronBatchRunRand()
+	job.CronBatchRunSendTx()
+}
+
 func New() (*Cron, error) {
 	appcore, err := appcore.New()
 	if err != nil {
@@ -48,8 +54,7 @@ func (c *Cron) Start() {
 	for {
 		select {
 		case <-time.After(timeDur):
-			// c.CronBatchRunRand()
-			c.CronBatchRunSendTx()
+			c.Run()
 		}
 	}
 }
